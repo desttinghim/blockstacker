@@ -154,6 +154,8 @@ pub fn update(current_time: f64, delta: f64) anyerror!void {
         new_piece.move_down();
         if (new_piece.collides_with(&ctx.grid)) {
             // Integrate
+            ctx.piece.integrate_with(&ctx.grid);
+            ctx.piece.set_type(.I);
         } else {
             ctx.piece = new_piece;
         }

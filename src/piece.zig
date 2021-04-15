@@ -62,6 +62,18 @@ pub const Piece = struct {
         return false;
     }
 
+    pub fn integrate_with(self: *@This(), grid: *Grid) void {
+        for (self.items) |block_self, i| {
+            switch (block_self) {
+                .none => continue,
+                .some => |_| if (self.i2vec(i)) |pos| {
+                    var gpos = pos.addv(self.pos);
+                    grid.set(gpos, block_self);
+                },
+            }
+        }
+    }
+
     pub fn move_left(self: *@This()) void {
         self.pos = self.pos.subv(veci(1, 0));
     }
@@ -92,42 +104,49 @@ pub const Piece = struct {
                 self.set(veci(2, 2), .{ .some = 0 });
                 self.set(veci(3, 2), .{ .some = 0 });
                 self.set(veci(4, 2), .{ .some = 0 });
+                self.pos = veci(0, 0);
             },
             .J => {
                 self.set(veci(1, 1), .{ .some = 0 });
                 self.set(veci(1, 2), .{ .some = 0 });
                 self.set(veci(2, 2), .{ .some = 0 });
                 self.set(veci(3, 2), .{ .some = 0 });
+                self.pos = veci(0, 0);
             },
             .L => {
                 self.set(veci(1, 2), .{ .some = 0 });
                 self.set(veci(2, 2), .{ .some = 0 });
                 self.set(veci(3, 2), .{ .some = 0 });
                 self.set(veci(3, 1), .{ .some = 0 });
+                self.pos = veci(0, 0);
             },
             .O => {
                 self.set(veci(2, 2), .{ .some = 0 });
                 self.set(veci(3, 2), .{ .some = 0 });
                 self.set(veci(2, 3), .{ .some = 0 });
                 self.set(veci(3, 3), .{ .some = 0 });
+                self.pos = veci(0, 0);
             },
             .S => {
                 self.set(veci(1, 3), .{ .some = 0 });
                 self.set(veci(2, 3), .{ .some = 0 });
                 self.set(veci(2, 2), .{ .some = 0 });
                 self.set(veci(3, 2), .{ .some = 0 });
+                self.pos = veci(0, 0);
             },
             .T => {
                 self.set(veci(1, 2), .{ .some = 0 });
                 self.set(veci(2, 2), .{ .some = 0 });
                 self.set(veci(3, 2), .{ .some = 0 });
                 self.set(veci(2, 3), .{ .some = 0 });
+                self.pos = veci(0, 0);
             },
             .Z => {
                 self.set(veci(1, 2), .{ .some = 0 });
                 self.set(veci(2, 2), .{ .some = 0 });
                 self.set(veci(2, 3), .{ .some = 0 });
                 self.set(veci(3, 3), .{ .some = 0 });
+                self.pos = veci(0, 0);
             },
             else => {
                 std.log.debug("Not implemented", .{});
