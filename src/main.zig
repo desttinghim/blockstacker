@@ -34,6 +34,7 @@ const Context = struct {
     // Game variables
     grid: Grid,
     piece: Piece,
+    last_time: f64,
 
     // Rendering variables
     flat: FlatRenderer,
@@ -49,12 +50,14 @@ pub fn onInit() !void {
     ctx = .{
         .grid = try Grid.init(allocator, vec(10, 20)),
         .piece = try Piece.init(allocator, vec(0, 0)),
+        .last_time = 0,
         .tileset_tex = try await load_tileset,
         .flat = try FlatRenderer.init(allocator, seizer.getScreenSize().intToFloat(f32)),
         .font = try await load_font,
     };
 
     ctx.grid.set(vec(9, 19), .{ .some = 0 });
+    ctx.piece.set_type(.I);
 }
 
 pub fn onDeinit() void {
@@ -94,7 +97,9 @@ fn draw_tile(f: *FlatRenderer, id: u16, pos: Vec) void {
 fn draw_grid_offset(f: *FlatRenderer, offset: Vec, g: *Grid) void {
     for (g.items) |block, i| {
         if (block == .some) {
-            draw_tile(f, block.some, g.i2vec(i));
+            if (g.i2vec(i)) |pos| {
+                draw_tile(f, block.some, pos);
+            }
         }
     }
 }
@@ -115,4 +120,9 @@ pub fn render(alpha: f64) !void {
     ctx.flat.flush();
 }
 
-pub fn update(currentTime: f64, delta: f64) anyerror!void {}
+pub fn update(current_time: f64, delta: f64) anyerror!void {
+    if (current_time - ctx.last_time > 1.0) {
+        ctx.piece.rotate_ws();
+        ctx.last_time = current_time;
+    }
+}
