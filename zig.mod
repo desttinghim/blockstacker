@@ -4,3 +4,8 @@ main: src/main.zig
 dev_dependencies:
   - src: git https://github.com/leroycep/seizer.git
     version: branch-controllers
+  - src: git https://github.com/leroycep/zigimg.git
+    version: branch-wasm
+    name: zigimg
+    main: zigimg.zig
+ 
