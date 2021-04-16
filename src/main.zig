@@ -13,6 +13,7 @@ const Texture = @import("texture.zig").Texture;
 const Block = @import("grid.zig").Block;
 const Grid = @import("grid.zig").Grid;
 const Piece = @import("piece.zig").Piece;
+const PieceType = @import("piece.zig").PieceType;
 const util = @import("util.zig");
 
 pub fn main() void {
@@ -40,6 +41,9 @@ const Context = struct {
     piece: Piece,
     down_pressed: bool,
     last_time: f64,
+    bag: [7]PieceType,
+    grab: usize,
+    cleared_rows: [4]?usize,
 
     // Rendering variables
     flat: FlatRenderer,
@@ -57,13 +61,25 @@ pub fn onInit() !void {
         .piece = Piece.init(veci(0, 0)),
         .down_pressed = false,
         .last_time = 0,
+        .bag = Piece.shuffled_bag(),
+        .grab = 0,
+        .cleared_rows = [1]?usize{null} ** 4,
         .tileset_tex = try await load_tileset,
         .flat = try FlatRenderer.init(allocator, seizer.getScreenSize().intToFloat(f32)),
         .font = try await load_font,
     };
 
-    ctx.grid.set(veci(9, 19), .{ .some = 0 });
-    ctx.piece.set_type(.I);
+    grab_next_piece();
+}
+
+fn grab_next_piece() void {
+    var next = ctx.bag[ctx.grab];
+    ctx.piece.set_type(next);
+    ctx.grab += 1;
+    if (ctx.grab >= ctx.bag.len) {
+        ctx.grab = 0;
+        ctx.bag = Piece.shuffled_bag();
+    }
 }
 
 pub fn onDeinit() void {
@@ -84,7 +100,6 @@ pub fn onEvent(event: seizer.event.Event) !void {
                 .D, .RIGHT => new_piece.move_right(),
                 .S, .DOWN => {
                     ctx.down_pressed = true;
-                    new_piece.move_down();
                 },
 
                 .ESCAPE => seizer.quit(),
@@ -145,20 +160,24 @@ pub fn render(alpha: f64) !void {
 }
 
 pub fn update(current_time: f64, delta: f64) anyerror!void {
-    if (ctx.down_pressed) {
-        ctx.last_time = current_time;
-        ctx.down_pressed = false;
-    }
-    if (current_time - ctx.last_time > 1.0) {
+    if (ctx.down_pressed or current_time - ctx.last_time > 1.0) {
+        for (ctx.cleared_rows) |row_opt, i| {
+            if (row_opt) |row| {
+                ctx.grid.drop_rows_above(row);
+                ctx.cleared_rows[i] = null;
+            }
+        }
         var new_piece = ctx.piece;
         new_piece.move_down();
         if (new_piece.collides_with(&ctx.grid)) {
             // Integrate
             ctx.piece.integrate_with(&ctx.grid);
-            ctx.piece.set_type(.I);
+            grab_next_piece();
+            ctx.cleared_rows = ctx.grid.clear_rows();
         } else {
             ctx.piece = new_piece;
         }
         ctx.last_time = current_time;
+        ctx.down_pressed = false;
     }
 }

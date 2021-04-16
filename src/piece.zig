@@ -9,15 +9,14 @@ const Block = grid_zig.Block;
 const Grid = grid_zig.Grid;
 const util = @import("util.zig");
 
-pub const PieceType = enum {
-    I,
+pub const PieceType = enum(usize) {
+    I = 0,
     J,
     L,
     O,
     S,
     T,
     Z,
-    Other,
 };
 
 pub const Piece = struct {
@@ -35,6 +34,29 @@ pub const Piece = struct {
             .pos = pos,
         };
         return this;
+    }
+
+    pub fn get_bag() [7]PieceType {
+        var bag: [7]PieceType = undefined;
+        var i: usize = 0;
+        while (i < 7) : (i += 1) {
+            bag[i] = @intToEnum(PieceType, i);
+        }
+        return bag;
+    }
+
+    pub fn shuffled_bag() [7]PieceType {
+        var rng = std.rand.DefaultPrng.init(0);
+        var rand = &rng.random;
+        var bag = @This().get_bag();
+        var i: usize = 0;
+        while (i < bag.len) : (i += 1) {
+            var a = rand.intRangeLessThanBiased(usize, 0, bag.len);
+            const current = bag[i];
+            bag[i] = bag[a];
+            bag[a] = current;
+        }
+        return bag;
     }
 
     pub fn clear(self: *@This()) void {
@@ -147,9 +169,6 @@ pub const Piece = struct {
                 self.set(veci(2, 3), .{ .some = 0 });
                 self.set(veci(3, 3), .{ .some = 0 });
                 self.pos = veci(0, 0);
-            },
-            else => {
-                std.log.debug("Not implemented", .{});
             },
         }
     }
