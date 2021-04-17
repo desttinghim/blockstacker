@@ -55,6 +55,11 @@ pub const Grid = struct {
             null;
     }
 
+    pub fn get_row_slice(self: *@This(), row: usize) []Block {
+        var offset = row * self.size.x;
+        return self.items[offset .. offset + self.size.x];
+    }
+
     /// Only call on known good locations
     pub fn get_raw(self: *@This(), pos: Veci) Block {
         return self.items[self.vec2i(pos).?];
@@ -67,45 +72,33 @@ pub const Grid = struct {
         self.set(pos2, a);
     }
 
-    pub fn clear_rows(self: *@This()) [4]?usize {
-        var cleared: [4]?usize = [1]?usize{null} ** 4;
-        var cleared_i: usize = 0;
+    pub fn clear_rows(self: *@This()) !void {
         var row: usize = self.size.y - 1;
         while (row > 0) : (row -= 1) {
             var full_row = true;
-            {
-                var x: usize = 0;
-                while (x < self.size.x) : (x += 1) {
-                    if (self.get(vec(x, row).intCast(isize))) |block| {
-                        if (block == .none) {
-                            full_row = false;
-                            break;
-                        }
-                    }
+            var row_slice = self.get_row_slice(row);
+            for (row_slice) |*val| {
+                if (val.* == .none) {
+                    full_row = false;
+                    break;
                 }
             }
 
             if (full_row) {
-                std.log.debug("{}", .{row});
-                cleared[cleared_i] = row;
-                cleared_i += 1;
-                if (cleared_i > 4) @panic("More than 4 rows cleared at a time?!");
-                var x: usize = 0;
-                while (x < self.size.x) : (x += 1) {
-                    self.set(vec(x, row).intCast(isize), .none);
+                for (row_slice) |*val| {
+                    val.* = .none;
                 }
-            }
-        }
-
-        return cleared;
-    }
-
-    pub fn drop_rows_above(self: *@This(), row: usize) void {
-        var x: usize = 0;
-        while (x < self.size.x) : (x += 1) {
-            var y: usize = row;
-            while (y > 1) : (y -= 1) {
-                self.swap(vec(x, y).intCast(isize), vec(x, y - 1).intCast(isize));
+                var temp_slice = try self.allocator.alloc(Block, self.size.x);
+                defer self.allocator.free(temp_slice);
+                var y: usize = row;
+                while (y > 0) : (y -= 1) {
+                    var a = self.get_row_slice(y);
+                    var b = self.get_row_slice(y - 1);
+                    std.mem.copy(Block, temp_slice, b);
+                    std.mem.copy(Block, a, b);
+                    std.mem.copy(Block, a, temp_slice);
+                }
+                row += 1;
             }
         }
     }

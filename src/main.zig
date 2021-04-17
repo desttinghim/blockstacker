@@ -124,7 +124,7 @@ fn draw_tile(f: *FlatRenderer, id: u16, pos: Veci) void {
     const texpos1 = vec2f(@intToFloat(f32, tileposx) / @intToFloat(f32, ctx.tileset_tex.size.x / TILE_W), @intToFloat(f32, tileposy) / @intToFloat(f32, ctx.tileset_tex.size.y / TILE_H));
     const texpos2 = vec2f(@intToFloat(f32, tileposx + 1) / @intToFloat(f32, ctx.tileset_tex.size.x / TILE_W), @intToFloat(f32, tileposy + 1) / @intToFloat(f32, ctx.tileset_tex.size.y / TILE_H));
 
-    f.drawTextureExt(ctx.tileset_tex, pos.scale(16).intToFloat(f32), .{
+    f.drawTextureExt(ctx.tileset_tex, pos.intToFloat(f32), .{
         .size = vec2f(16, 16),
         .rect = .{
             .min = texpos1,
@@ -137,7 +137,17 @@ fn draw_grid_offset(f: *FlatRenderer, offset: Veci, size: Vec, grid: []Block) vo
     for (grid) |block, i| {
         if (block == .some) {
             if (util.i2vec(size, i)) |pos| {
-                draw_tile(f, block.some, offset.addv(pos));
+                draw_tile(f, block.some, offset.addv(pos.scale(16)));
+            }
+        }
+    }
+}
+
+fn draw_grid_offset_bg(f: *FlatRenderer, offset: Veci, size: Vec, grid: []Block) void {
+    for (grid) |block, i| {
+        if (block == .none) {
+            if (util.i2vec(size, i)) |pos| {
+                draw_tile(f, 8, offset.addv(pos.scale(16)));
             }
         }
     }
@@ -146,6 +156,10 @@ fn draw_grid_offset(f: *FlatRenderer, offset: Veci, size: Vec, grid: []Block) vo
 pub fn render(alpha: f64) !void {
     const screen_size = seizer.getScreenSize();
     const screen_size_f = screen_size.intToFloat(f32);
+    const grid_offset = vec(
+        @intCast(usize, @divTrunc(screen_size.x, 2)) - @divTrunc(ctx.grid.size.x * 16, 2),
+        0,
+    ).intCast(isize);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -153,27 +167,27 @@ pub fn render(alpha: f64) !void {
 
     ctx.flat.setSize(screen_size_f);
 
-    draw_grid_offset(&ctx.flat, veci(0, 0), ctx.grid.size, ctx.grid.items);
-    draw_grid_offset(&ctx.flat, ctx.piece.pos, ctx.piece.size, &ctx.piece.items);
+    draw_grid_offset_bg(&ctx.flat, grid_offset, ctx.grid.size, ctx.grid.items);
+    draw_grid_offset(&ctx.flat, grid_offset, ctx.grid.size, ctx.grid.items);
+    draw_grid_offset(&ctx.flat, grid_offset.addv(ctx.piece.pos.scale(16)), ctx.piece.size, &ctx.piece.items);
+    var y: isize = 0;
+    while (y < ctx.grid.size.y) : (y += 1) {
+        draw_tile(&ctx.flat, 0, grid_offset.add(-16, y * 16));
+        draw_tile(&ctx.flat, 0, grid_offset.add(@intCast(isize, ctx.grid.size.x) * 16, y * 16));
+    }
 
     ctx.flat.flush();
 }
 
 pub fn update(current_time: f64, delta: f64) anyerror!void {
     if (ctx.down_pressed or current_time - ctx.last_time > 1.0) {
-        for (ctx.cleared_rows) |row_opt, i| {
-            if (row_opt) |row| {
-                ctx.grid.drop_rows_above(row);
-                ctx.cleared_rows[i] = null;
-            }
-        }
         var new_piece = ctx.piece;
         new_piece.move_down();
         if (new_piece.collides_with(&ctx.grid)) {
             // Integrate
             ctx.piece.integrate_with(&ctx.grid);
             grab_next_piece();
-            ctx.cleared_rows = ctx.grid.clear_rows();
+            try ctx.grid.clear_rows();
         } else {
             ctx.piece = new_piece;
         }
