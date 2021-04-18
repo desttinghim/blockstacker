@@ -46,7 +46,7 @@ pub const Piece = struct {
     }
 
     pub fn shuffled_bag() [7]PieceType {
-        var rng = std.rand.DefaultPrng.init(0);
+        var rng = std.rand.DefaultPrng.init(@intCast(u64, std.time.milliTimestamp()));
         var rand = &rng.random;
         var bag = @This().get_bag();
         var i: usize = 0;
