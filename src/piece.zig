@@ -126,49 +126,49 @@ pub const Piece = struct {
                 self.set(veci(2, 2), .{ .some = 7 });
                 self.set(veci(3, 2), .{ .some = 7 });
                 self.set(veci(4, 2), .{ .some = 7 });
-                self.pos = veci(0, 0);
+                self.pos = veci(1, -1);
             },
             .J => {
                 self.set(veci(1, 1), .{ .some = 1 });
                 self.set(veci(1, 2), .{ .some = 1 });
                 self.set(veci(2, 2), .{ .some = 1 });
                 self.set(veci(3, 2), .{ .some = 1 });
-                self.pos = veci(0, 0);
+                self.pos = veci(2, -1);
             },
             .L => {
                 self.set(veci(1, 2), .{ .some = 2 });
                 self.set(veci(2, 2), .{ .some = 2 });
                 self.set(veci(3, 2), .{ .some = 2 });
                 self.set(veci(3, 1), .{ .some = 2 });
-                self.pos = veci(0, 0);
+                self.pos = veci(2, -1);
             },
             .O => {
                 self.set(veci(2, 2), .{ .some = 3 });
                 self.set(veci(3, 2), .{ .some = 3 });
                 self.set(veci(2, 3), .{ .some = 3 });
                 self.set(veci(3, 3), .{ .some = 3 });
-                self.pos = veci(0, 0);
+                self.pos = veci(2, -1);
             },
             .S => {
                 self.set(veci(1, 3), .{ .some = 4 });
                 self.set(veci(2, 3), .{ .some = 4 });
                 self.set(veci(2, 2), .{ .some = 4 });
                 self.set(veci(3, 2), .{ .some = 4 });
-                self.pos = veci(0, 0);
+                self.pos = veci(2, -1);
             },
             .T => {
                 self.set(veci(1, 2), .{ .some = 5 });
                 self.set(veci(2, 2), .{ .some = 5 });
                 self.set(veci(3, 2), .{ .some = 5 });
                 self.set(veci(2, 3), .{ .some = 5 });
-                self.pos = veci(0, 0);
+                self.pos = veci(2, -1);
             },
             .Z => {
                 self.set(veci(1, 2), .{ .some = 6 });
                 self.set(veci(2, 2), .{ .some = 6 });
                 self.set(veci(2, 3), .{ .some = 6 });
                 self.set(veci(3, 3), .{ .some = 6 });
-                self.pos = veci(0, 0);
+                self.pos = veci(2, -1);
             },
         }
     }
