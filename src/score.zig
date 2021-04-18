@@ -37,3 +37,7 @@ const level_table: [10]usize = .{ 53, 49, 45, 41, 37, 33, 28, 22, 17, 11 };
 pub fn get_drop_delta(level: usize) f32 {
     return 1.0 / (60.0 / @intToFloat(f32, level_table[level]));
 }
+
+pub fn get_soft_drop_delta() f32 {
+    return 1.0 / (60.0 / 3.0);
+}

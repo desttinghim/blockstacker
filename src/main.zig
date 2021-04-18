@@ -17,6 +17,7 @@ const PieceType = @import("piece.zig").PieceType;
 const util = @import("util.zig");
 const get_score = @import("score.zig").get_score;
 const get_drop_delta = @import("score.zig").get_drop_delta;
+const get_soft_drop_delta = @import("score.zig").get_soft_drop_delta;
 
 pub fn main() void {
     seizer.run(.{
@@ -41,7 +42,7 @@ const Context = struct {
     // Game variables
     grid: Grid,
     piece: Piece,
-    down_pressed: bool,
+    inputs: Inputs,
     last_time: f64,
     bag: [7]PieceType,
     grab: usize,
@@ -68,7 +69,13 @@ pub fn onInit() !void {
     ctx = .{
         .grid = try Grid.init(allocator, vec(10, 20)),
         .piece = Piece.init(veci(0, 0)),
-        .down_pressed = false,
+        .inputs = .{
+            .down = .Released,
+            .left = .Released,
+            .right = .Released,
+            .rot_ws = .Released,
+            .rot_cw = .Released,
+        },
         .last_time = 0,
         .bag = Piece.shuffled_bag(),
         .grab = 0,
@@ -108,25 +115,40 @@ pub fn onDeinit() void {
     _ = gpa.deinit();
 }
 
+const InputState = enum {
+    JustPressed,
+    Pressed,
+    Released,
+};
+
+const Inputs = struct {
+    down: InputState,
+    left: InputState,
+    right: InputState,
+    rot_cw: InputState,
+    rot_ws: InputState,
+};
+
 pub fn onEvent(event: seizer.event.Event) !void {
     switch (event) {
-        .KeyDown => |e| {
-            var new_piece = ctx.piece;
-            switch (e.scancode) {
-                .Z, .COMMA => new_piece.rotate_ws(),
-                .X, .PERIOD => new_piece.rotate_cw(),
-                .A, .LEFT => new_piece.move_left(),
-                .D, .RIGHT => new_piece.move_right(),
-                .S, .DOWN => {
-                    ctx.down_pressed = true;
-                },
+        .KeyDown => |e| switch (e.scancode) {
+            .Z, .COMMA => ctx.inputs.rot_ws = .JustPressed,
+            .X, .PERIOD => ctx.inputs.rot_cw = .JustPressed,
+            .A, .LEFT => ctx.inputs.left = .JustPressed,
+            .D, .RIGHT => ctx.inputs.right = .JustPressed,
+            .S, .DOWN => ctx.inputs.down = .JustPressed,
 
-                .ESCAPE => seizer.quit(),
-                else => {},
-            }
-            if (!new_piece.collides_with(&ctx.grid)) {
-                ctx.piece = new_piece;
-            }
+            .ESCAPE => seizer.quit(),
+            else => {},
+        },
+        .KeyUp => |e| switch (e.scancode) {
+            .Z, .COMMA => ctx.inputs.rot_ws = .Released,
+            .X, .PERIOD => ctx.inputs.rot_cw = .Released,
+            .A, .LEFT => ctx.inputs.left = .Released,
+            .D, .RIGHT => ctx.inputs.right = .Released,
+            .S, .DOWN => ctx.inputs.down = .Released,
+
+            else => {},
         },
         .Quit => seizer.quit(),
         else => {},
@@ -203,7 +225,21 @@ pub fn render(alpha: f64) !void {
 }
 
 pub fn update(current_time: f64, delta: f64) anyerror!void {
-    if (ctx.down_pressed or current_time - ctx.last_time > get_drop_delta(ctx.level)) {
+    {
+        var new_piece = ctx.piece;
+        if (ctx.inputs.right == .JustPressed) new_piece.move_right();
+        if (ctx.inputs.left == .JustPressed) new_piece.move_left();
+        if (ctx.inputs.rot_ws == .JustPressed) new_piece.rotate_ws();
+        if (ctx.inputs.rot_cw == .JustPressed) new_piece.rotate_cw();
+
+        if (!new_piece.collides_with(&ctx.grid)) {
+            ctx.piece = new_piece;
+        }
+    }
+
+    if ((ctx.inputs.down == .Pressed and ctx.last_time > get_soft_drop_delta()) or
+        ctx.inputs.down == .JustPressed or current_time - ctx.last_time > get_drop_delta(ctx.level))
+    {
         var new_piece = ctx.piece;
         new_piece.move_down();
         if (new_piece.collides_with(&ctx.grid)) {
@@ -225,10 +261,19 @@ pub fn update(current_time: f64, delta: f64) anyerror!void {
                 ctx.level += 1;
                 ctx.level_at += 10;
             }
+
+            // Turn off down input when new piece is made
+            ctx.inputs.down = .Released;
         } else {
             ctx.piece = new_piece;
         }
         ctx.last_time = current_time;
-        ctx.down_pressed = false;
     }
+
+    // Update input state
+    if (ctx.inputs.down == .JustPressed) ctx.inputs.down = .Pressed;
+    if (ctx.inputs.left == .JustPressed) ctx.inputs.left = .Pressed;
+    if (ctx.inputs.right == .JustPressed) ctx.inputs.right = .Pressed;
+    if (ctx.inputs.rot_ws == .JustPressed) ctx.inputs.rot_ws = .Pressed;
+    if (ctx.inputs.rot_cw == .JustPressed) ctx.inputs.rot_cw = .Pressed;
 }
