@@ -15,6 +15,7 @@ const Grid = @import("grid.zig").Grid;
 const Piece = @import("piece.zig").Piece;
 const PieceType = @import("piece.zig").PieceType;
 const util = @import("util.zig");
+const get_score = @import("score.zig").get_score;
 
 pub fn main() void {
     seizer.run(.{
@@ -44,11 +45,13 @@ const Context = struct {
     bag: [7]PieceType,
     grab: usize,
     cleared_rows: [4]?usize,
+    score: usize,
 
     // Rendering variables
     flat: FlatRenderer,
     font: FontRenderer,
     tileset_tex: Texture,
+    score_text: []u8,
 };
 var ctx: Context = undefined;
 
@@ -64,9 +67,12 @@ pub fn onInit() !void {
         .bag = Piece.shuffled_bag(),
         .grab = 0,
         .cleared_rows = [1]?usize{null} ** 4,
+        .score = 0,
+
         .tileset_tex = try await load_tileset,
         .flat = try FlatRenderer.init(allocator, seizer.getScreenSize().intToFloat(f32)),
         .font = try await load_font,
+        .score_text = try std.fmt.allocPrint(allocator, "{}", .{0}),
     };
 
     grab_next_piece();
@@ -83,6 +89,7 @@ fn grab_next_piece() void {
 }
 
 pub fn onDeinit() void {
+    allocator.free(ctx.score_text);
     ctx.grid.deinit();
     ctx.font.deinit();
     ctx.flat.deinit();
@@ -176,6 +183,8 @@ pub fn render(alpha: f64) !void {
         draw_tile(&ctx.flat, 0, grid_offset.add(@intCast(isize, ctx.grid.size.x) * 16, y * 16));
     }
 
+    ctx.font.drawText(&ctx.flat, ctx.score_text, vec(0, 0).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+
     ctx.flat.flush();
 }
 
@@ -187,7 +196,10 @@ pub fn update(current_time: f64, delta: f64) anyerror!void {
             // Integrate
             ctx.piece.integrate_with(&ctx.grid);
             grab_next_piece();
-            try ctx.grid.clear_rows();
+            var lines = try ctx.grid.clear_rows();
+            ctx.score += get_score(lines, 0);
+            allocator.free(ctx.score_text);
+            ctx.score_text = try std.fmt.allocPrint(allocator, "{}", .{ctx.score});
         } else {
             ctx.piece = new_piece;
         }
