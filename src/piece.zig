@@ -17,21 +17,22 @@ pub const PieceType = enum(usize) {
     S,
     T,
     Z,
+    Unknown = 255,
 };
 
 pub const Piece = struct {
     items: [25]Block,
     items_copy: [25]Block,
     size: Vec,
-    pos: Veci,
+    piece_type: PieceType,
 
-    pub fn init(pos: Veci) @This() {
+    pub fn init() @This() {
         var this: @This() = undefined;
         this = @This(){
             .items = [1]Block{.none} ** 25,
             .items_copy = [1]Block{.none} ** 25,
             .size = vec(5, 5),
-            .pos = pos,
+            .piece_type = .Unknown,
         };
         return this;
     }
@@ -62,14 +63,15 @@ pub const Piece = struct {
     pub fn clear(self: *@This()) void {
         std.mem.set(Block, &self.items, Block.none);
         std.mem.set(Block, &self.items_copy, Block.none);
+        self.piece_type = .Unknown;
     }
 
-    pub fn collides_with(self: *@This(), grid: *Grid) bool {
+    pub fn collides_with(self: *@This(), piece_pos: Veci, grid: *Grid) bool {
         for (self.items) |block_self, i| {
             switch (block_self) {
                 .none => continue,
                 .some => |_| if (self.i2vec(i)) |pos| {
-                    var gpos = pos.addv(self.pos);
+                    var gpos = pos.addv(piece_pos);
                     if (grid.get(gpos)) |block| {
                         if (block == .some) {
                             return true; // Collision is true since we intersected a block
@@ -84,91 +86,86 @@ pub const Piece = struct {
         return false;
     }
 
-    pub fn integrate_with(self: *@This(), grid: *Grid) void {
+    pub fn integrate_with(self: *@This(), piece_pos: Veci, grid: *Grid) void {
         for (self.items) |block_self, i| {
             switch (block_self) {
                 .none => continue,
                 .some => |_| if (self.i2vec(i)) |pos| {
-                    var gpos = pos.addv(self.pos);
+                    var gpos = pos.addv(piece_pos);
                     grid.set(gpos, block_self);
                 },
             }
         }
     }
 
-    pub fn move_left(self: *@This()) void {
-        self.pos = self.pos.subv(veci(1, 0));
-    }
-
-    pub fn move_right(self: *@This()) void {
-        self.pos = self.pos.addv(veci(1, 0));
-    }
-
-    pub fn move_down(self: *@This()) void {
-        self.pos = self.pos.addv(veci(0, 1));
-    }
-
     pub fn rotate_cw(self: *@This()) void {
+        if (self.piece_type == .O) return;
         self.transpose();
         self.reverse_rows();
     }
 
     pub fn rotate_ws(self: *@This()) void {
+        if (self.piece_type == .O) return;
         self.reverse_rows();
         self.transpose();
     }
 
-    pub fn set_type(self: *@This(), piece: PieceType) void {
+    /// Returns offset
+    pub fn set_type(self: *@This(), piece: PieceType) Veci {
         self.clear();
+        self.piece_type = piece;
         switch (piece) {
             .I => {
                 self.set(veci(1, 2), .{ .some = 7 });
                 self.set(veci(2, 2), .{ .some = 7 });
                 self.set(veci(3, 2), .{ .some = 7 });
                 self.set(veci(4, 2), .{ .some = 7 });
-                self.pos = veci(1, -1);
+                return veci(1, -1);
             },
             .J => {
                 self.set(veci(1, 1), .{ .some = 1 });
                 self.set(veci(1, 2), .{ .some = 1 });
                 self.set(veci(2, 2), .{ .some = 1 });
                 self.set(veci(3, 2), .{ .some = 1 });
-                self.pos = veci(2, -1);
+                return veci(2, -1);
             },
             .L => {
                 self.set(veci(1, 2), .{ .some = 2 });
                 self.set(veci(2, 2), .{ .some = 2 });
                 self.set(veci(3, 2), .{ .some = 2 });
                 self.set(veci(3, 1), .{ .some = 2 });
-                self.pos = veci(2, -1);
+                return veci(2, -1);
             },
             .O => {
                 self.set(veci(2, 2), .{ .some = 3 });
                 self.set(veci(3, 2), .{ .some = 3 });
                 self.set(veci(2, 3), .{ .some = 3 });
                 self.set(veci(3, 3), .{ .some = 3 });
-                self.pos = veci(2, -1);
+                return veci(2, -1);
             },
             .S => {
                 self.set(veci(1, 3), .{ .some = 4 });
                 self.set(veci(2, 3), .{ .some = 4 });
                 self.set(veci(2, 2), .{ .some = 4 });
                 self.set(veci(3, 2), .{ .some = 4 });
-                self.pos = veci(2, -1);
+                return veci(2, -1);
             },
             .T => {
                 self.set(veci(1, 2), .{ .some = 5 });
                 self.set(veci(2, 2), .{ .some = 5 });
                 self.set(veci(3, 2), .{ .some = 5 });
                 self.set(veci(2, 3), .{ .some = 5 });
-                self.pos = veci(2, -1);
+                return veci(2, -1);
             },
             .Z => {
                 self.set(veci(1, 2), .{ .some = 6 });
                 self.set(veci(2, 2), .{ .some = 6 });
                 self.set(veci(2, 3), .{ .some = 6 });
                 self.set(veci(3, 3), .{ .some = 6 });
-                self.pos = veci(2, -1);
+                return veci(2, -1);
+            },
+            .Unknown => {
+                return veci(2, 0);
             },
         }
     }

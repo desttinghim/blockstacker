@@ -42,6 +42,7 @@ const Context = struct {
     // Game variables
     grid: Grid,
     piece: Piece,
+    piece_pos: Veci,
     inputs: Inputs,
     last_time: f64,
     bag: [7]PieceType,
@@ -68,7 +69,8 @@ pub fn onInit() !void {
 
     ctx = .{
         .grid = try Grid.init(allocator, vec(10, 20)),
-        .piece = Piece.init(veci(0, 0)),
+        .piece = Piece.init(),
+        .piece_pos = veci(0, 0),
         .inputs = .{
             .down = .Released,
             .left = .Released,
@@ -97,7 +99,7 @@ pub fn onInit() !void {
 
 fn grab_next_piece() void {
     var next = ctx.bag[ctx.grab];
-    ctx.piece.set_type(next);
+    ctx.piece_pos = ctx.piece.set_type(next);
     ctx.grab += 1;
     if (ctx.grab >= ctx.bag.len) {
         ctx.grab = 0;
@@ -210,7 +212,7 @@ pub fn render(alpha: f64) !void {
 
     draw_grid_offset_bg(&ctx.flat, grid_offset, ctx.grid.size, ctx.grid.items);
     draw_grid_offset(&ctx.flat, grid_offset, ctx.grid.size, ctx.grid.items);
-    draw_grid_offset(&ctx.flat, grid_offset.addv(ctx.piece.pos.scale(16)), ctx.piece.size, &ctx.piece.items);
+    draw_grid_offset(&ctx.flat, grid_offset.addv(ctx.piece_pos.scale(16)), ctx.piece.size, &ctx.piece.items);
     var y: isize = 0;
     while (y < ctx.grid.size.y) : (y += 1) {
         draw_tile(&ctx.flat, 0, grid_offset.add(-16, y * 16));
@@ -227,24 +229,26 @@ pub fn render(alpha: f64) !void {
 pub fn update(current_time: f64, delta: f64) anyerror!void {
     {
         var new_piece = ctx.piece;
-        if (ctx.inputs.right == .JustPressed) new_piece.move_right();
-        if (ctx.inputs.left == .JustPressed) new_piece.move_left();
+        var new_pos = ctx.piece_pos;
+        if (ctx.inputs.right == .JustPressed) new_pos = new_pos.add(1, 0);
+        if (ctx.inputs.left == .JustPressed) new_pos = new_pos.sub(1, 0);
         if (ctx.inputs.rot_ws == .JustPressed) new_piece.rotate_ws();
         if (ctx.inputs.rot_cw == .JustPressed) new_piece.rotate_cw();
 
-        if (!new_piece.collides_with(&ctx.grid)) {
+        if (!new_piece.collides_with(new_pos, &ctx.grid)) {
             ctx.piece = new_piece;
+            ctx.piece_pos = new_pos;
         }
     }
 
     if ((ctx.inputs.down == .Pressed and ctx.last_time > get_soft_drop_delta()) or
         ctx.inputs.down == .JustPressed or current_time - ctx.last_time > get_drop_delta(ctx.level))
     {
-        var new_piece = ctx.piece;
-        new_piece.move_down();
-        if (new_piece.collides_with(&ctx.grid)) {
+        var new_pos = ctx.piece_pos;
+        new_pos = new_pos.add(0, 1);
+        if (ctx.piece.collides_with(new_pos, &ctx.grid)) {
             // Integrate
-            ctx.piece.integrate_with(&ctx.grid);
+            ctx.piece.integrate_with(ctx.piece_pos, &ctx.grid);
             grab_next_piece();
             var lines = try ctx.grid.clear_rows();
             ctx.cleared_rows += lines;
@@ -257,7 +261,7 @@ pub fn update(current_time: f64, delta: f64) anyerror!void {
             allocator.free(ctx.lines_text);
             ctx.lines_text = try std.fmt.allocPrint(allocator, "Lines: {}", .{ctx.cleared_rows});
 
-            if (ctx.cleared_rows > ctx.level_at) {
+            if (ctx.cleared_rows > ctx.level_at and ctx.level < 9) {
                 ctx.level += 1;
                 ctx.level_at += 10;
             }
@@ -265,7 +269,7 @@ pub fn update(current_time: f64, delta: f64) anyerror!void {
             // Turn off down input when new piece is made
             ctx.inputs.down = .Released;
         } else {
-            ctx.piece = new_piece;
+            ctx.piece_pos = new_pos;
         }
         ctx.last_time = current_time;
     }
