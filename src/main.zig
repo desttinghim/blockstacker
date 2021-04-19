@@ -89,9 +89,9 @@ pub fn onInit() !void {
         .tileset_tex = try await load_tileset,
         .flat = try FlatRenderer.init(allocator, seizer.getScreenSize().intToFloat(f32)),
         .font = try await load_font,
-        .score_text = try std.fmt.allocPrint(allocator, "Score: {}", .{0}),
-        .level_text = try std.fmt.allocPrint(allocator, "Level: {}", .{0}),
-        .lines_text = try std.fmt.allocPrint(allocator, "Lines: {}", .{0}),
+        .score_text = try std.fmt.allocPrint(allocator, "{}", .{0}),
+        .level_text = try std.fmt.allocPrint(allocator, "{}", .{0}),
+        .lines_text = try std.fmt.allocPrint(allocator, "{}", .{0}),
     };
 
     grab_next_piece();
@@ -151,6 +151,15 @@ pub fn onEvent(event: seizer.event.Event) !void {
             .S, .DOWN => ctx.inputs.down = .Released,
 
             else => {},
+        },
+        .ControllerButtonDown => |cbutton| switch (cbutton.button) {
+            .DPAD_DOWN => ctx.inputs.down = .JustPressed,
+            .DPAD_LEFT => ctx.inputs.left = .JustPressed,
+            .DPAD_RIGHT => ctx.inputs.right = .JustPressed,
+            // .START => toggle_menu = true,
+            .A => ctx.inputs.rot_ws = .JustPressed,
+            .B => ctx.inputs.rot_cw = .JustPressed,
+            else => |num| {},
         },
         .Quit => seizer.quit(),
         else => {},
@@ -219,9 +228,14 @@ pub fn render(alpha: f64) !void {
         draw_tile(&ctx.flat, 0, grid_offset.add(@intCast(isize, ctx.grid.size.x) * 16, y * 16));
     }
 
-    ctx.font.drawText(&ctx.flat, ctx.score_text, vec(0, 0).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
-    ctx.font.drawText(&ctx.flat, ctx.level_text, vec(0, 32).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
-    ctx.font.drawText(&ctx.flat, ctx.lines_text, vec(0, 64).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+    ctx.font.drawText(&ctx.flat, "SCORE:", vec(0, 0).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+    ctx.font.drawText(&ctx.flat, ctx.score_text, vec(0, 32).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+
+    ctx.font.drawText(&ctx.flat, "LEVEL:", vec(0, 64).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+    ctx.font.drawText(&ctx.flat, ctx.level_text, vec(0, 96).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+
+    ctx.font.drawText(&ctx.flat, "LINES:", vec(0, 128).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+    ctx.font.drawText(&ctx.flat, ctx.lines_text, vec(0, 160).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
 
     ctx.flat.flush();
 }
@@ -255,11 +269,11 @@ pub fn update(current_time: f64, delta: f64) anyerror!void {
             ctx.score += get_score(lines, ctx.level);
 
             allocator.free(ctx.score_text);
-            ctx.score_text = try std.fmt.allocPrint(allocator, "Score: {}", .{ctx.score});
+            ctx.score_text = try std.fmt.allocPrint(allocator, "{}", .{ctx.score});
             allocator.free(ctx.level_text);
-            ctx.level_text = try std.fmt.allocPrint(allocator, "Level: {}", .{ctx.level});
+            ctx.level_text = try std.fmt.allocPrint(allocator, "{}", .{ctx.level});
             allocator.free(ctx.lines_text);
-            ctx.lines_text = try std.fmt.allocPrint(allocator, "Lines: {}", .{ctx.cleared_rows});
+            ctx.lines_text = try std.fmt.allocPrint(allocator, "{}", .{ctx.cleared_rows});
 
             if (ctx.cleared_rows > ctx.level_at and ctx.level < 9) {
                 ctx.level += 1;
