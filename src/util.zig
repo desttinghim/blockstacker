@@ -1,3 +1,4 @@
+const std = @import("std");
 const seizer = @import("seizer");
 const Veci = seizer.math.Vec(2, isize);
 const veci = Veci.init;
@@ -14,4 +15,15 @@ pub fn vec2i(size: Vec, pos: Veci) ?usize {
 
 pub fn i2vec(size: Vec, i: usize) ?Veci {
     return if (i < size.x * size.y) veci(@intCast(isize, i % size.x), @intCast(isize, i / size.x)) else null;
+}
+
+/// Shuffles a slice in place
+pub fn shuffle(comptime T: type, rand: *std.rand.Random, slice: []T) void {
+    var i: usize = 0;
+    while (i < slice.len) : (i += 1) {
+        var a = rand.intRangeLessThanBiased(usize, 0, slice.len);
+        const current = slice[i];
+        slice[i] = slice[a];
+        slice[a] = current;
+    }
 }

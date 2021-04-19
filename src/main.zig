@@ -4,7 +4,8 @@ const FlatRenderer = @import("flat_render.zig").FlatRenderer;
 const FontRenderer = @import("font_render.zig").BitmapFontRenderer;
 const Texture = @import("texture.zig").Texture;
 const Context = @import("context.zig").Context;
-const Stacking = @import("game.zig").Stacking;
+const Screen = @import("context.zig").Screen;
+const GameScreen = @import("game.zig").GameScreen;
 
 pub fn main() void {
     seizer.run(.{
@@ -21,8 +22,6 @@ pub fn main() void {
     });
 }
 
-// TODO: Get a proper screen abstraction
-var game: Stacking = undefined;
 var ctx: Context = undefined;
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 var rng: std.rand.DefaultPrng = undefined;
@@ -39,26 +38,33 @@ pub fn onInit() !void {
         .font = try await load_font,
         .allocator = allocator,
         .rand = &rng.random,
+        .screens = std.ArrayList(Screen).init(allocator),
     };
 
-    game = try Stacking.init(&ctx, 0);
+    try ctx.push_screen(GameScreen);
+    // try game.init(&ctx);
 }
 
 pub fn onDeinit() void {
-    game.deinit(&ctx);
+    for (ctx.screens.items) |screen| {
+        screen.deinit(&ctx);
+    }
+    ctx.screens.deinit();
     ctx.font.deinit();
     ctx.flat.deinit();
     _ = gpa.deinit();
 }
 
 pub fn onEvent(event: seizer.event.Event) !void {
-    try game.onEvent(&ctx, event);
+    ctx.current_screen().event(&ctx, event);
 }
 
 pub fn render(alpha: f64) !void {
-    try game.render(&ctx, alpha);
+    for (ctx.screens.items) |screen| {
+        screen.render(&ctx, alpha);
+    }
 }
 
 pub fn update(current_time: f64, delta: f64) anyerror!void {
-    try game.update(&ctx, current_time, delta);
+    ctx.current_screen().update(&ctx, current_time, delta);
 }
