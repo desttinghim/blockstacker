@@ -20,6 +20,30 @@ pub const PieceType = enum(usize) {
     Unknown = 255,
 };
 
+pub fn get_bag() [7]PieceType {
+    var bag: [7]PieceType = undefined;
+    var i: usize = 0;
+    while (i < 7) : (i += 1) {
+        bag[i] = @intToEnum(PieceType, i);
+    }
+    return bag;
+}
+
+pub fn shuffled_bag(ctx: Context) [7]PieceType {
+    var rng = std.rand.DefaultPrng.init(@intCast(u64, std.time.milliTimestamp()));
+    var rand = &rng.random;
+    var bag = @This().get_bag();
+    var i: usize = 0;
+    while (i < bag.len) : (i += 1) {
+        var a = rand.intRangeLessThanBiased(usize, 0, bag.len);
+        const current = bag[i];
+        bag[i] = bag[a];
+        bag[a] = current;
+    }
+    return bag;
+}
+
+
 pub const Piece = struct {
     items: [25]Block,
     items_copy: [25]Block,
@@ -35,29 +59,6 @@ pub const Piece = struct {
             .piece_type = .Unknown,
         };
         return this;
-    }
-
-    pub fn get_bag() [7]PieceType {
-        var bag: [7]PieceType = undefined;
-        var i: usize = 0;
-        while (i < 7) : (i += 1) {
-            bag[i] = @intToEnum(PieceType, i);
-        }
-        return bag;
-    }
-
-    pub fn shuffled_bag() [7]PieceType {
-        var rng = std.rand.DefaultPrng.init(@intCast(u64, std.time.milliTimestamp()));
-        var rand = &rng.random;
-        var bag = @This().get_bag();
-        var i: usize = 0;
-        while (i < bag.len) : (i += 1) {
-            var a = rand.intRangeLessThanBiased(usize, 0, bag.len);
-            const current = bag[i];
-            bag[i] = bag[a];
-            bag[a] = current;
-        }
-        return bag;
     }
 
     pub fn clear(self: *@This()) void {
