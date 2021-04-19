@@ -17,6 +17,16 @@ const Vertex = extern struct {
     opacity: f32,
 };
 
+pub const Quad = struct {
+    pos: Vec2f,
+    size: Vec2f,
+};
+
+pub const Rect = struct {
+    min: Vec2f,
+    max: Vec2f,
+};
+
 pub const FlatRenderer = struct {
     program: gl.GLuint,
     vertex_array_object: gl.GLuint,
@@ -92,10 +102,7 @@ pub const FlatRenderer = struct {
 
     pub const ExtOptions = struct {
         size: ?Vec2f = null,
-        rect: struct {
-            min: Vec2f,
-            max: Vec2f,
-        } = .{
+        rect: Rect = .{
             .min = vec2f(0, 0),
             .max = vec2f(1, 1),
         },

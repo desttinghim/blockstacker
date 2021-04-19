@@ -3,6 +3,7 @@ const seizer = @import("seizer");
 const FlatRenderer = @import("flat_render.zig").FlatRenderer;
 const FontRenderer = @import("font_render.zig").BitmapFontRenderer;
 const Texture = @import("texture.zig").Texture;
+const ScoreEntry = @import("score.zig").ScoreEntry;
 
 pub const Context = struct {
     flat: FlatRenderer,
@@ -11,6 +12,18 @@ pub const Context = struct {
     allocator: *std.mem.Allocator,
     rand: *std.rand.Random,
     screens: std.ArrayList(Screen),
+    scores: std.ArrayList(ScoreEntry),
+
+    pub fn add_score(self: *@This(), name: []const u8, score: usize) !void {
+        var i: usize = 0;
+        while (i < self.scores.items.len) {
+            if (self.scores.items[i].score <= score) {
+                try self.scores.insert(i, .{ .name = name, .score = score });
+                return;
+            }
+        }
+        try self.scores.append(.{ .name = name, .score = score });
+    }
 
     pub fn current_screen(self: *@This()) Screen {
         return if (self.screens.items.len > 0) self.screens.items[self.screens.items.len - 1] else NullScreen;
@@ -27,8 +40,10 @@ pub const Context = struct {
     }
 
     pub fn pop_screen(self: *@This()) void {
-        var screen = self.screens.pop();
-        screen.deinit(self);
+        if (self.screens.items.len > 0) {
+            var screen = self.screens.pop();
+            screen.deinit(self);
+        }
     }
 };
 

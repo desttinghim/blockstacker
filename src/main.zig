@@ -6,6 +6,7 @@ const Texture = @import("texture.zig").Texture;
 const Context = @import("context.zig").Context;
 const Screen = @import("context.zig").Screen;
 const GameScreen = @import("game.zig").GameScreen;
+const ScoreEntry = @import("score.zig").ScoreEntry;
 
 pub fn main() void {
     seizer.run(.{
@@ -39,10 +40,10 @@ pub fn onInit() !void {
         .allocator = allocator,
         .rand = &rng.random,
         .screens = std.ArrayList(Screen).init(allocator),
+        .scores = std.ArrayList(ScoreEntry).init(allocator),
     };
 
     try ctx.push_screen(GameScreen);
-    // try game.init(&ctx);
 }
 
 pub fn onDeinit() void {
@@ -50,6 +51,7 @@ pub fn onDeinit() void {
         screen.deinit(&ctx);
     }
     ctx.screens.deinit();
+    ctx.scores.deinit();
     ctx.font.deinit();
     ctx.flat.deinit();
     _ = gpa.deinit();

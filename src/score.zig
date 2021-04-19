@@ -41,3 +41,8 @@ pub fn get_drop_delta(level: usize) f32 {
 pub fn get_soft_drop_delta() f32 {
     return 1.0 / (60.0 / 3.0);
 }
+
+pub const ScoreEntry = struct {
+    name: []const u8,
+    score: usize,
+};

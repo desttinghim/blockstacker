@@ -20,7 +20,8 @@ const get_drop_delta = @import("score.zig").get_drop_delta;
 const get_soft_drop_delta = @import("score.zig").get_soft_drop_delta;
 const Context = @import("context.zig").Context;
 const NullScreen = @import("context.zig").NullScreen;
-const GameOverScreen = @import("game_over.zig").GameOverScreen;
+const NineSlice = @import("nineslice.zig").NineSlice;
+const drawNineSlice = @import("nineslice.zig").drawNineSlice;
 
 pub const GameScreen = .{
     .init = init,
@@ -322,4 +323,66 @@ fn draw_grid_offset_bg(ctx: *Context, offset: Veci, size: Vec, dgrid: []Block) v
             }
         }
     }
+}
+
+/// Game Over Screen
+pub const GameOverScreen = .{
+    .init = go_init,
+    .deinit = go_deinit,
+    .event = go_event,
+    .update = go_update,
+    .render = go_render,
+};
+
+fn pixelToTex(tex: *Texture, pixel: Veci) Vec2f {
+    return vec2f(
+        @intToFloat(f32, pixel.x) / @intToFloat(f32, tex.size.x),
+        @intToFloat(f32, pixel.y) / @intToFloat(f32, tex.size.y),
+    );
+}
+
+var button_pressed = false;
+
+fn go_init(ctx: *Context) void {
+    button_pressed = false;
+}
+
+fn go_deinit(ctx: *Context) void {}
+
+fn go_event(ctx: *Context, evt: seizer.event.Event) void {
+    switch (evt) {
+        .KeyDown => |e| switch (e.scancode) {
+            else => button_pressed = true,
+        },
+        .Quit => seizer.quit(),
+        else => {},
+    }
+}
+
+fn go_update(ctx: *Context, current_time: f64, delta: f64) void {
+    if (button_pressed) {
+        ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
+        ctx.pop_screen();
+        ctx.switch_screen(GameScreen) catch |e| @panic("Couldn't switch screen");
+    }
+}
+
+fn go_render(ctx: *Context, alpha: f64) void {
+    const screen_size = seizer.getScreenSize();
+    const screen_size_f = screen_size.intToFloat(f32);
+    const nineslice_size = screen_size_f.divv(vec2f(2, 2));
+    const nineslice_pos = screen_size_f.scaleDiv(2).subv(nineslice_size.scaleDiv(2));
+
+    var nineslice = NineSlice.init(
+        pixelToTex(&ctx.tileset_tex, veci(0, 48)),
+        pixelToTex(&ctx.tileset_tex, veci(48, 96)),
+        nineslice_pos,
+        nineslice_size,
+        vec2f(16, 16),
+    );
+    drawNineSlice(&ctx.flat, ctx.tileset_tex, nineslice);
+
+    ctx.font.drawText(&ctx.flat, "GAME OVER!", nineslice_pos.add(nineslice_size.x / 2, 16), .{ .scale = 2, .textAlign = .Center, .textBaseline = .Top });
+
+    ctx.flat.flush();
 }
