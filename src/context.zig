@@ -48,11 +48,11 @@ pub const Context = struct {
 };
 
 pub const Screen = struct {
-    init: fn (ctx: *Context) void,
-    deinit: fn (ctx: *Context) void,
-    event: fn (ctx: *Context, evt: seizer.event.Event) void,
-    update: fn (ctx: *Context, current_time: f64, delta: f64) void,
-    render: fn (ctx: *Context, alpha: f64) void,
+    init: fn (ctx: *Context) void = init,
+    deinit: fn (ctx: *Context) void = deinit,
+    event: fn (ctx: *Context, evt: seizer.event.Event) void = event,
+    update: fn (ctx: *Context, current_time: f64, delta: f64) void = update,
+    render: fn (ctx: *Context, alpha: f64) void = render,
 };
 
 pub const Transition = union(enum) {

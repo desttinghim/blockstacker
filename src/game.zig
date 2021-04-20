@@ -20,6 +20,7 @@ const get_drop_delta = @import("score.zig").get_drop_delta;
 const get_soft_drop_delta = @import("score.zig").get_soft_drop_delta;
 const Context = @import("context.zig").Context;
 const NullScreen = @import("context.zig").NullScreen;
+const PauseScreen = @import("pause.zig").PauseScreen;
 const NineSlice = @import("nineslice.zig").NineSlice;
 const drawNineSlice = @import("nineslice.zig").drawNineSlice;
 
@@ -140,7 +141,7 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
             .D, .RIGHT => inputs.right = .JustPressed,
             .S, .DOWN => inputs.down = .JustPressed,
 
-            .ESCAPE => seizer.quit(),
+            .ESCAPE => ctx.push_screen(PauseScreen) catch @panic("Could not push screen"),
             else => {},
         },
         .KeyUp => |e| switch (e.scancode) {
@@ -156,7 +157,7 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
             .DPAD_DOWN => inputs.down = .JustPressed,
             .DPAD_LEFT => inputs.left = .JustPressed,
             .DPAD_RIGHT => inputs.right = .JustPressed,
-            // .START => toggle_menu = true,
+            .START => ctx.push_screen(PauseScreen) catch @panic("Could not push screen"),
             .A => inputs.rot_ws = .JustPressed,
             .B => inputs.rot_cw = .JustPressed,
             else => |num| {},
