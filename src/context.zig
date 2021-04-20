@@ -4,6 +4,7 @@ const FlatRenderer = @import("flat_render.zig").FlatRenderer;
 const FontRenderer = @import("font_render.zig").BitmapFontRenderer;
 const Texture = @import("texture.zig").Texture;
 const ScoreEntry = @import("score.zig").ScoreEntry;
+const Setup = @import("game.zig").Setup;
 
 pub const Context = struct {
     flat: FlatRenderer,
@@ -13,6 +14,7 @@ pub const Context = struct {
     rand: *std.rand.Random,
     screens: std.ArrayList(Screen),
     scores: std.ArrayList(ScoreEntry),
+    setup: Setup,
 
     pub fn add_score(self: *@This(), name: []const u8, score: usize) !void {
         var i: usize = 0;

@@ -64,6 +64,10 @@ fn shuffled_bag(ctx: *Context) [7]PieceType {
     return tempbag;
 }
 
+pub const Setup = struct {
+    level: usize = 0,
+};
+
 var grid: Grid = undefined;
 var piece: Piece = undefined;
 var piece_pos: Veci = undefined;
@@ -109,8 +113,7 @@ pub fn init(ctx: *Context) void {
     grab = 0;
     cleared_rows = 0;
     score = 0;
-    level = 0;
-    level_at = 10;
+    set_level(ctx.setup.level);
 
     score_text = std.fmt.allocPrint(ctx.allocator, "{}", .{0}) catch |e| {
         fail_to_null(ctx);

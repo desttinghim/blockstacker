@@ -43,6 +43,7 @@ pub fn onInit() !void {
         .rand = &rng.random,
         .screens = std.ArrayList(Screen).init(allocator),
         .scores = std.ArrayList(ScoreEntry).init(allocator),
+        .setup = .{},
     };
 
     try ctx.push_screen(MainMenuScreen);

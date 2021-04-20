@@ -75,19 +75,36 @@ pub const SetupScreen: Screen = .{
 };
 
 var setup_menu: Menu = undefined;
+var setup_level_label: []u8 = undefined;
 
 fn setup_init(ctx: *Context) void {
-    setup_menu = Menu.init(ctx.allocator, &.{
+    setup_level_label = ctx.allocator.dupe(u8, "Level: 0") catch @panic("Couldn't setup label");
+    errdefer ctx.allocator.free(setup_level_label);
+    const menu_items = [_]MenuItem{
         .{ .label = "Start Game", .onaction = setup_action_start_game },
-    }) catch @panic("Couldn't set up menu");
+        .{ .label = setup_level_label, .onspin = setup_spin_level },
+    };
+    setup_menu = Menu.init(ctx.allocator, &menu_items) catch @panic("Couldn't set up menu");
 }
 
 fn setup_deinit(ctx: *Context) void {
     setup_menu.deinit();
+    ctx.allocator.free(setup_level_label);
 }
 
 fn setup_action_start_game(ctx: *Context, _: *MenuItem) void {
     ctx.set_screen(GameScreen) catch @panic("Switching screen somehow caused allocation");
+}
+
+fn setup_spin_level(ctx: *Context, item: *MenuItem, increase: bool) void {
+    if (increase and ctx.setup.level < 9) {
+        ctx.setup.level += 1;
+    } else if (!increase and ctx.setup.level > 0) {
+        ctx.setup.level -= 1;
+    }
+    ctx.allocator.free(item.label);
+    setup_level_label = std.fmt.allocPrint(ctx.allocator, "Level: {}", .{ctx.setup.level}) catch @panic("Couldn't format label");
+    item.label = setup_level_label;
 }
 
 fn setup_event(ctx: *Context, evt: seizer.event.Event) void {
