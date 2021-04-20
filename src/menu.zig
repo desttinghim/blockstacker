@@ -45,7 +45,7 @@ pub const Menu = struct {
                 .DPAD_DOWN => down = true,
                 .DPAD_UP => up = true,
                 .DPAD_LEFT => left = true,
-                .DPAD_RIGHT => left = true,
+                .DPAD_RIGHT => right = true,
                 else => {},
             },
             else => {},
