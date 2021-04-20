@@ -20,6 +20,7 @@ pub fn main() void {
             .width = 480,
             .height = 320,
         },
+        .sdlControllerDBPath = "sdl_controllers.txt",
     });
 }
 

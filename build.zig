@@ -19,8 +19,26 @@ pub fn build(b: *std.build.Builder) void {
     exe.install();
     exe.linkLibC();
 
-    exe.linkSystemLibrary("SDL2");
+    const sdl_sdk_path_opt = b.option([]const u8, "sdl-sdk", "The path to the SDL2 sdk") orelse null;
+    if (sdl_sdk_path_opt) |sdk_path| {
+        exe.linkSystemLibraryName("SDL2");
+        exe.addIncludeDir(b.fmt("{s}/include", .{sdk_path}));
+
+        const lib_dir = b.fmt("{s}/lib", .{sdk_path});
+        exe.addLibPath(lib_dir);
+    } else {
+        exe.linkSystemLibrary("SDL2");
+    }
+
     deps.addAllTo(exe);
+
+    // Install assets alongside binary
+    const copy_assets = b.addInstallDirectory(.{
+        .source_dir = "assets",
+        .install_dir = .Bin,
+        .install_subdir = "assets",
+    });
+    exe.step.dependOn(&copy_assets.step);
 
     const run_cmd = exe.run();
     run_cmd.step.dependOn(b.getInstallStep());
