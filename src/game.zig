@@ -72,9 +72,10 @@ pub const Setup = struct {
 var grid: Grid = undefined;
 var piece: Piece = undefined;
 var piece_pos: Veci = undefined;
+var next_piece: Piece = undefined;
 var inputs: Inputs = undefined;
 var last_time: f64 = undefined;
-var bag: [7]PieceType = undefined;
+var bag: [14]PieceType = undefined;
 var grab: usize = undefined;
 var cleared_rows: usize = undefined;
 var score: usize = undefined;
@@ -102,6 +103,7 @@ pub fn init(ctx: *Context) void {
     };
     piece = Piece.init();
     piece_pos = veci(0, 0);
+    next_piece = Piece.init();
     inputs = .{
         .down = .Released,
         .left = .Released,
@@ -110,7 +112,8 @@ pub fn init(ctx: *Context) void {
         .rot_cw = .Released,
     };
     last_time = 0;
-    bag = shuffled_bag(ctx);
+    bag[0..7].* = shuffled_bag(ctx);
+    bag[7..14].* = shuffled_bag(ctx);
     grab = 0;
     cleared_rows = 0;
     score = 0;
@@ -278,6 +281,7 @@ pub fn render(ctx: *Context, alpha: f64) void {
         draw_tile(ctx, 0, grid_offset.add(-16, y * 16));
         draw_tile(ctx, 0, grid_offset.add(@intCast(isize, grid.size.x) * 16, y * 16));
     }
+    draw_grid_offset(ctx, veci(screen_size.x - 8 * 16, 0), next_piece.size, &next_piece.items);
 
     ctx.font.drawText(&ctx.flat, "SCORE:", vec(0, 0).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
     ctx.font.drawText(&ctx.flat, score_text, vec(0, 32).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
@@ -296,10 +300,19 @@ fn grab_next_piece(ctx: *Context) void {
     var next = bag[grab];
     piece_pos = piece.set_type(next);
     grab += 1;
-    if (grab >= bag.len) {
-        grab = 0;
-        bag = shuffled_bag(ctx);
+    switch (grab) {
+        6 => bag[0..7].* = shuffled_bag(ctx),
+        13 => {
+            grab = 0;
+            bag[7..14].* = shuffled_bag(ctx);
+        },
+        else => {},
     }
+    if (grab >= bag.len) {
+        std.log.debug("Grab out of bounds", .{});
+        grab = 0;
+    }
+    _ = next_piece.set_type(bag[grab]);
 }
 
 fn draw_tile(ctx: *Context, id: u16, pos: Veci) void {
