@@ -26,6 +26,7 @@ const drawNineSlice = @import("nineslice.zig").drawNineSlice;
 const Menu = @import("menu.zig").Menu;
 const MenuItem = @import("menu.zig").MenuItem;
 const MainMenuScreen = @import("main_menu.zig").MainMenuScreen;
+const SetupScreen = @import("main_menu.zig").SetupScreen;
 
 pub const GameScreen = .{
     .init = init,
@@ -370,12 +371,8 @@ fn go_deinit(ctx: *Context) void {
 
 fn go_action_restart(ctx: *Context, _: *MenuItem) void {
     ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
-    ctx.set_screen(GameScreen) catch |e| @panic("Couldn't set screen");
-}
-
-fn go_action_main_menu(ctx: *Context, _: *MenuItem) void {
-    ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
     ctx.set_screen(MainMenuScreen) catch |e| @panic("Couldn't set screen");
+    ctx.push_screen(SetupScreen) catch |e| @panic("Couldn't push screen");
 }
 
 fn go_action_quit(ctx: *Context, _: *MenuItem) void {
