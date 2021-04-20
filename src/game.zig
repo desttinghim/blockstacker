@@ -23,6 +23,7 @@ const NullScreen = @import("context.zig").NullScreen;
 const PauseScreen = @import("pause.zig").PauseScreen;
 const NineSlice = @import("nineslice.zig").NineSlice;
 const drawNineSlice = @import("nineslice.zig").drawNineSlice;
+const Menu = @import("menu.zig").Menu;
 
 pub const GameScreen = .{
     .init = init,
@@ -337,9 +338,7 @@ fn draw_grid_offset_bg(ctx: *Context, offset: Veci, size: Vec, dgrid: []Block) v
 /// Game Over Screen
 pub const GameOverScreen = .{
     .init = go_init,
-    .deinit = go_deinit,
     .event = go_event,
-    .update = go_update,
     .render = go_render,
 };
 
@@ -350,30 +349,29 @@ fn pixelToTex(tex: *Texture, pixel: Veci) Vec2f {
     );
 }
 
-var button_pressed = false;
+var go_menu: Menu = undefined;
 
 fn go_init(ctx: *Context) void {
-    button_pressed = false;
+    go_menu = Menu.init(&.{
+        .{ .Action = .{ .label = "Restart", .onaction = go_action_restart } },
+        .{ .Action = .{ .label = "Quit", .onaction = go_action_quit } },
+    });
 }
 
-fn go_deinit(ctx: *Context) void {}
+fn go_action_restart(ctx: *Context) void {
+    ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
+    ctx.pop_screen();
+    ctx.switch_screen(GameScreen) catch |e| @panic("Couldn't switch screen");
+}
+fn go_action_quit(ctx: *Context) void {
+    ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
+    seizer.quit();
+}
 
 fn go_event(ctx: *Context, evt: seizer.event.Event) void {
-    switch (evt) {
-        .KeyDown => |e| switch (e.scancode) {
-            else => button_pressed = true,
-        },
-        .ControllerButtonDown => button_pressed = true,
-        .Quit => seizer.quit(),
-        else => {},
-    }
-}
-
-fn go_update(ctx: *Context, current_time: f64, delta: f64) void {
-    if (button_pressed) {
-        ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
-        ctx.pop_screen();
-        ctx.switch_screen(GameScreen) catch |e| @panic("Couldn't switch screen");
+    go_menu.event(ctx, evt);
+    if (evt == .Quit) {
+        seizer.quit();
     }
 }
 
@@ -393,6 +391,10 @@ fn go_render(ctx: *Context, alpha: f64) void {
     drawNineSlice(&ctx.flat, ctx.tileset_tex, nineslice);
 
     ctx.font.drawText(&ctx.flat, "GAME OVER!", nineslice_pos.add(nineslice_size.x / 2, 16), .{ .scale = 2, .textAlign = .Center, .textBaseline = .Top });
+
+    const menu_size = go_menu.getMinSize(ctx);
+    const menu_pos = nineslice_size.subv(menu_size).scaleDiv(2).addv(nineslice_pos);
+    go_menu.render(ctx, alpha, menu_pos);
 
     ctx.flat.flush();
 }
