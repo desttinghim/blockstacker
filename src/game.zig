@@ -405,7 +405,8 @@ var go_menu: Menu = undefined;
 fn go_init(ctx: *Context) void {
     go_menu = Menu.init(ctx.allocator, &.{
         .{ .label = "Restart", .onaction = go_action_restart },
-        .{ .label = "Quit", .onaction = go_action_quit },
+        .{ .label = "Setup", .onaction = go_action_setup },
+        .{ .label = "Main Menu", .onaction = go_action_main_menu },
     }) catch @panic("Couldn't setup menu");
 }
 
@@ -415,13 +416,18 @@ fn go_deinit(ctx: *Context) void {
 
 fn go_action_restart(ctx: *Context, _: *MenuItem) void {
     ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
+    ctx.set_screen(GameScreen) catch |e| @panic("Couldn't set screen");
+}
+
+fn go_action_setup(ctx: *Context, _: *MenuItem) void {
+    ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
     ctx.set_screen(MainMenuScreen) catch |e| @panic("Couldn't set screen");
     ctx.push_screen(SetupScreen) catch |e| @panic("Couldn't push screen");
 }
 
-fn go_action_quit(ctx: *Context, _: *MenuItem) void {
+fn go_action_main_menu(ctx: *Context, _: *MenuItem) void {
     ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
-    seizer.quit();
+    ctx.set_screen(MainMenuScreen) catch |e| @panic("Couldn't set screen");
 }
 
 fn go_event(ctx: *Context, evt: seizer.event.Event) void {
