@@ -43,6 +43,7 @@ const InputState = enum {
 };
 
 const Inputs = struct {
+    hardDrop: InputState,
     down: InputState,
     left: InputState,
     right: InputState,
@@ -106,6 +107,7 @@ pub fn init(ctx: *Context) void {
     piece_pos = veci(0, 0);
     next_piece = Piece.init();
     inputs = .{
+        .hardDrop = .Released,
         .down = .Released,
         .left = .Released,
         .right = .Released,
@@ -151,6 +153,7 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
             .A, .LEFT => inputs.left = .JustPressed,
             .D, .RIGHT => inputs.right = .JustPressed,
             .S, .DOWN => inputs.down = .JustPressed,
+            .W, .UP => inputs.hardDrop = .JustPressed,
 
             .ESCAPE => ctx.push_screen(PauseScreen) catch @panic("Could not push screen"),
             else => {},
@@ -161,10 +164,12 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
             .A, .LEFT => inputs.left = .Released,
             .D, .RIGHT => inputs.right = .Released,
             .S, .DOWN => inputs.down = .Released,
+            .W, .UP => inputs.hardDrop = .Released,
 
             else => {},
         },
         .ControllerButtonDown => |cbutton| switch (cbutton.button) {
+            .DPAD_UP => inputs.hardDrop = .JustPressed,
             .DPAD_DOWN => inputs.down = .JustPressed,
             .DPAD_LEFT => inputs.left = .JustPressed,
             .DPAD_RIGHT => inputs.right = .JustPressed,
@@ -174,6 +179,7 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
             else => {},
         },
         .ControllerButtonUp => |cbutton| switch (cbutton.button) {
+            .DPAD_UP => inputs.hardDrop = .Released,
             .DPAD_DOWN => inputs.down = .Released,
             .DPAD_LEFT => inputs.left = .Released,
             .DPAD_RIGHT => inputs.right = .Released,
@@ -201,7 +207,15 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
         }
     }
 
-    if ((inputs.down == .Pressed and last_time > get_soft_drop_delta()) or
+    const prev_score = score;
+
+    var piece_integrated = false;
+    if (inputs.hardDrop == .JustPressed) {
+        score += @intCast(usize, piece_drop_pos.y - piece_pos.y) * 2;
+        piece.integrate_with(piece_drop_pos, &grid);
+        piece_integrated = true;
+        last_time = current_time;
+    } else if ((inputs.down == .Pressed and last_time > get_soft_drop_delta()) or
         inputs.down == .JustPressed or current_time - last_time > get_drop_delta(level))
     {
         var new_pos = piece_pos;
@@ -209,53 +223,64 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
         if (piece.collides_with(new_pos, &grid)) {
             // Integrate
             piece.integrate_with(piece_pos, &grid);
-            grab_next_piece(ctx);
-            var lines = grid.clear_rows() catch |e| {
-                fail_to_null(ctx);
-                return;
-            };
-            // Checks to see if the new piece collides with the grid.
-            // If it is, then the game is over!
-            if (piece.collides_with(piece_pos, &grid)) {
-                ctx.push_screen(GameOverScreen) catch |e| @panic("Could not push screen");
-            }
-            cleared_rows += lines;
-            score += get_score(lines, level);
-
-            ctx.allocator.free(score_text);
-            ctx.allocator.free(level_text);
-            ctx.allocator.free(lines_text);
-
-            score_text = std.fmt.allocPrint(ctx.allocator, "{}", .{score}) catch |e| {
-                fail_to_null(ctx);
-                return;
-            };
-            level_text = std.fmt.allocPrint(ctx.allocator, "{}", .{level}) catch |e| {
-                fail_to_null(ctx);
-                return;
-            };
-            lines_text = std.fmt.allocPrint(ctx.allocator, "{}", .{cleared_rows}) catch |e| {
-                fail_to_null(ctx);
-                return;
-            };
-
-            if (cleared_rows > level_at and level < 9) {
-                level += 1;
-                level_at += 10;
-            }
-
-            // Turn off down input when new piece is made
-            inputs.down = .Released;
+            piece_integrated = true;
         } else {
             piece_pos = new_pos;
         }
+        if (inputs.down == .Pressed or inputs.down == .JustPressed) {
+            score += 1;
+        }
         last_time = current_time;
+    }
+
+    if (piece_integrated) {
+        grab_next_piece(ctx);
+        var lines = grid.clear_rows() catch |e| {
+            fail_to_null(ctx);
+            return;
+        };
+        // Checks to see if the new piece collides with the grid.
+        // If it is, then the game is over!
+        if (piece.collides_with(piece_pos, &grid)) {
+            ctx.push_screen(GameOverScreen) catch |e| @panic("Could not push screen");
+        }
+        cleared_rows += lines;
+        score += get_score(lines, level);
+
+        ctx.allocator.free(level_text);
+        ctx.allocator.free(lines_text);
+
+        level_text = std.fmt.allocPrint(ctx.allocator, "{}", .{level}) catch |e| {
+            fail_to_null(ctx);
+            return;
+        };
+        lines_text = std.fmt.allocPrint(ctx.allocator, "{}", .{cleared_rows}) catch |e| {
+            fail_to_null(ctx);
+            return;
+        };
+
+        if (cleared_rows > level_at and level < 9) {
+            level += 1;
+            level_at += 10;
+        }
+
+        // Turn off down input when new piece is made
+        inputs.down = .Released;
+    }
+
+    if (score != prev_score) {
+        ctx.allocator.free(score_text);
+        score_text = std.fmt.allocPrint(ctx.allocator, "{}", .{score}) catch |e| {
+            fail_to_null(ctx);
+            return;
+        };
     }
 
     piece_drop_pos = piece_pos;
     while (!piece.collides_with(piece_drop_pos.add(0, 1), &grid)) : (piece_drop_pos.y += 1) {}
 
     // Update input state
+    if (inputs.hardDrop == .JustPressed) inputs.hardDrop = .Pressed;
     if (inputs.down == .JustPressed) inputs.down = .Pressed;
     if (inputs.left == .JustPressed) inputs.left = .Pressed;
     if (inputs.right == .JustPressed) inputs.right = .Pressed;
@@ -381,7 +406,7 @@ fn go_init(ctx: *Context) void {
     go_menu = Menu.init(ctx.allocator, &.{
         .{ .label = "Restart", .onaction = go_action_restart },
         .{ .label = "Quit", .onaction = go_action_quit },
-    }) catch @panic("Couldn't set up menu");
+    }) catch @panic("Couldn't setup menu");
 }
 
 fn go_deinit(ctx: *Context) void {
