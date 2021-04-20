@@ -3,6 +3,7 @@ const Screen = @import("context.zig").Screen;
 const Context = @import("context.zig").Context;
 const seizer = @import("seizer");
 const Menu = @import("menu.zig").Menu;
+const MenuItem = @import("menu.zig").MenuItem;
 const gl = seizer.gl;
 const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
@@ -10,6 +11,7 @@ const GameScreen = @import("game.zig").GameScreen;
 
 pub const MainMenuScreen: Screen = .{
     .init = init,
+    .deinit = deinit,
     .event = event,
     .render = render,
 };
@@ -18,18 +20,22 @@ var menu: Menu = undefined;
 
 fn init(ctx: *Context) void {
     // TODO: Add settings screen for settings that don't affect gameplay
-    menu = Menu.init(&.{
-        .{ .Action = .{ .label = "Start Game", .onaction = action_setup_game } },
-        .{ .Action = .{ .label = "Quit", .onaction = action_quit } },
-    });
+    menu = Menu.init(ctx.allocator, &.{
+        .{ .label = "Start Game", .onaction = action_setup_game },
+        .{ .label = "Quit", .onaction = action_quit },
+    }) catch @panic("Couldn't set up menu");
 }
 
-fn action_setup_game(ctx: *Context) void {
+fn deinit(ctx: *Context) void {
+    menu.deinit();
+}
+
+fn action_setup_game(ctx: *Context, _: *MenuItem) void {
     // TODO: Go to setup screen instead of directly to game
     ctx.push_screen(SetupScreen) catch @panic("Switching screen somehow caused allocation");
 }
 
-fn action_quit(_ctx: *Context) void {
+fn action_quit(_ctx: *Context, _: *MenuItem) void {
     seizer.quit();
 }
 
@@ -63,6 +69,7 @@ fn render(ctx: *Context, alpha: f64) void {
 
 pub const SetupScreen: Screen = .{
     .init = setup_init,
+    .deinit = setup_deinit,
     .event = setup_event,
     .render = setup_render,
 };
@@ -70,14 +77,16 @@ pub const SetupScreen: Screen = .{
 var setup_menu: Menu = undefined;
 
 fn setup_init(ctx: *Context) void {
-    // TODO: Add settings screen for settings that don't affect gameplay
-    setup_menu = Menu.init(&.{
-        .{ .Action = .{ .label = "Start Game", .onaction = setup_action_start_game } },
-    });
+    setup_menu = Menu.init(ctx.allocator, &.{
+        .{ .label = "Start Game", .onaction = setup_action_start_game },
+    }) catch @panic("Couldn't set up menu");
 }
 
-fn setup_action_start_game(ctx: *Context) void {
-    // TODO: Go to setup screen instead of directly to game
+fn setup_deinit(ctx: *Context) void {
+    setup_menu.deinit();
+}
+
+fn setup_action_start_game(ctx: *Context, _: *MenuItem) void {
     ctx.set_screen(GameScreen) catch @panic("Switching screen somehow caused allocation");
 }
 

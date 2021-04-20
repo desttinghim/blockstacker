@@ -24,6 +24,7 @@ const PauseScreen = @import("pause.zig").PauseScreen;
 const NineSlice = @import("nineslice.zig").NineSlice;
 const drawNineSlice = @import("nineslice.zig").drawNineSlice;
 const Menu = @import("menu.zig").Menu;
+const MenuItem = @import("menu.zig").MenuItem;
 const MainMenuScreen = @import("main_menu.zig").MainMenuScreen;
 
 pub const GameScreen = .{
@@ -339,6 +340,7 @@ fn draw_grid_offset_bg(ctx: *Context, offset: Veci, size: Vec, dgrid: []Block) v
 /// Game Over Screen
 pub const GameOverScreen = .{
     .init = go_init,
+    .deinit = go_deinit,
     .event = go_event,
     .render = go_render,
 };
@@ -353,23 +355,27 @@ fn pixelToTex(tex: *Texture, pixel: Veci) Vec2f {
 var go_menu: Menu = undefined;
 
 fn go_init(ctx: *Context) void {
-    go_menu = Menu.init(&.{
-        .{ .Action = .{ .label = "Restart", .onaction = go_action_restart } },
-        .{ .Action = .{ .label = "Quit", .onaction = go_action_quit } },
-    });
+    go_menu = Menu.init(ctx.allocator, &.{
+        .{ .label = "Restart", .onaction = go_action_restart },
+        .{ .label = "Quit", .onaction = go_action_quit },
+    }) catch @panic("Couldn't set up menu");
 }
 
-fn go_action_restart(ctx: *Context) void {
+fn go_deinit(ctx: *Context) void {
+    go_menu.deinit();
+}
+
+fn go_action_restart(ctx: *Context, _: *MenuItem) void {
     ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
     ctx.set_screen(GameScreen) catch |e| @panic("Couldn't set screen");
 }
 
-fn go_action_main_menu(ctx: *Context) void {
+fn go_action_main_menu(ctx: *Context, _: *MenuItem) void {
     ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
     ctx.set_screen(MainMenuScreen) catch |e| @panic("Couldn't set screen");
 }
 
-fn go_action_quit(ctx: *Context) void {
+fn go_action_quit(ctx: *Context, _: *MenuItem) void {
     ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
     seizer.quit();
 }

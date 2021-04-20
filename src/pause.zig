@@ -3,6 +3,7 @@ const Screen = @import("context.zig").Screen;
 const Context = @import("context.zig").Context;
 const seizer = @import("seizer");
 const Menu = @import("menu.zig").Menu;
+const MenuItem = @import("menu.zig").MenuItem;
 const gl = seizer.gl;
 const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
@@ -10,6 +11,7 @@ const MainMenuScreen = @import("main_menu.zig").MainMenuScreen;
 
 pub const PauseScreen: Screen = .{
     .init = init,
+    .deinit = deinit,
     .event = event,
     .render = render,
 };
@@ -17,22 +19,26 @@ pub const PauseScreen: Screen = .{
 var menu: Menu = undefined;
 
 fn init(ctx: *Context) void {
-    menu = Menu.init(&.{
-        .{ .Action = .{ .label = "Resume", .onaction = action_resume } },
-        .{ .Action = .{ .label = "Main Menu", .onaction = action_main_menu } },
-        .{ .Action = .{ .label = "Quit", .onaction = action_quit } },
-    });
+    menu = Menu.init(ctx.allocator, &.{
+        .{ .label = "Resume", .onaction = action_resume },
+        .{ .label = "Main Menu", .onaction = action_main_menu },
+        .{ .label = "Quit", .onaction = action_quit },
+    }) catch @panic("Couldn't set up menu");
 }
 
-fn action_resume(ctx: *Context) void {
+fn deinit(ctx: *Context) void {
+    menu.deinit();
+}
+
+fn action_resume(ctx: *Context, _: *MenuItem) void {
     ctx.pop_screen();
 }
 
-fn action_main_menu(ctx: *Context) void {
+fn action_main_menu(ctx: *Context, _: *MenuItem) void {
     ctx.set_screen(MainMenuScreen) catch |e| @panic("Couldn't set screen");
 }
 
-fn action_quit(_ctx: *Context) void {
+fn action_quit(_ctx: *Context, _: *MenuItem) void {
     seizer.quit();
 }
 
