@@ -72,6 +72,7 @@ pub const Setup = struct {
 var grid: Grid = undefined;
 var piece: Piece = undefined;
 var piece_pos: Veci = undefined;
+var piece_drop_pos: Veci = undefined;
 var next_piece: Piece = undefined;
 var inputs: Inputs = undefined;
 var last_time: f64 = undefined;
@@ -251,6 +252,9 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
         last_time = current_time;
     }
 
+    piece_drop_pos = piece_pos;
+    while (!piece.collides_with(piece_drop_pos.add(0, 1), &grid)) : (piece_drop_pos.y += 1) {}
+
     // Update input state
     if (inputs.down == .JustPressed) inputs.down = .Pressed;
     if (inputs.left == .JustPressed) inputs.left = .Pressed;
@@ -274,14 +278,15 @@ pub fn render(ctx: *Context, alpha: f64) void {
     ctx.flat.setSize(screen_size_f);
 
     draw_grid_offset_bg(ctx, grid_offset, grid.size, grid.items);
-    draw_grid_offset(ctx, grid_offset, grid.size, grid.items);
-    draw_grid_offset(ctx, grid_offset.addv(piece_pos.scale(16)), piece.size, &piece.items);
+    draw_grid_offset(ctx, grid_offset, grid.size, grid.items, 1);
+    draw_grid_offset(ctx, grid_offset.addv(piece_pos.scale(16)), piece.size, &piece.items, 1);
+    draw_grid_offset(ctx, grid_offset.addv(piece_drop_pos.scale(16)), piece.size, &piece.items, 0.3);
     var y: isize = 0;
     while (y < grid.size.y) : (y += 1) {
-        draw_tile(ctx, 0, grid_offset.add(-16, y * 16));
-        draw_tile(ctx, 0, grid_offset.add(@intCast(isize, grid.size.x) * 16, y * 16));
+        draw_tile(ctx, 0, grid_offset.add(-16, y * 16), 1);
+        draw_tile(ctx, 0, grid_offset.add(@intCast(isize, grid.size.x) * 16, y * 16), 1);
     }
-    draw_grid_offset(ctx, veci(screen_size.x - 8 * 16, 0), next_piece.size, &next_piece.items);
+    draw_grid_offset(ctx, veci(screen_size.x - 8 * 16, 0), next_piece.size, &next_piece.items, 1);
 
     ctx.font.drawText(&ctx.flat, "SCORE:", vec(0, 0).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
     ctx.font.drawText(&ctx.flat, score_text, vec(0, 32).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
@@ -315,7 +320,7 @@ fn grab_next_piece(ctx: *Context) void {
     _ = next_piece.set_type(bag[grab]);
 }
 
-fn draw_tile(ctx: *Context, id: u16, pos: Veci) void {
+fn draw_tile(ctx: *Context, id: u16, pos: Veci, opacity: f32) void {
     const TILE_W = 16;
     const TILE_H = 16;
 
@@ -331,14 +336,15 @@ fn draw_tile(ctx: *Context, id: u16, pos: Veci) void {
             .min = texpos1,
             .max = texpos2,
         },
+        .opacity = opacity,
     });
 }
 
-fn draw_grid_offset(ctx: *Context, offset: Veci, size: Vec, dgrid: []Block) void {
+fn draw_grid_offset(ctx: *Context, offset: Veci, size: Vec, dgrid: []Block, opacity: f32) void {
     for (dgrid) |block, i| {
         if (block == .some) {
             if (util.i2vec(size, i)) |pos| {
-                draw_tile(ctx, block.some, offset.addv(pos.scale(16)));
+                draw_tile(ctx, block.some, offset.addv(pos.scale(16)), opacity);
             }
         }
     }
@@ -348,7 +354,7 @@ fn draw_grid_offset_bg(ctx: *Context, offset: Veci, size: Vec, dgrid: []Block) v
     for (dgrid) |block, i| {
         if (block == .none) {
             if (util.i2vec(size, i)) |pos| {
-                draw_tile(ctx, 8, offset.addv(pos.scale(16)));
+                draw_tile(ctx, 8, offset.addv(pos.scale(16)), 1);
             }
         }
     }
