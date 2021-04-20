@@ -63,7 +63,7 @@ pub fn build(b: *std.build.Builder) void {
         web.addPackage(deps.pkgs.seizer);
         web.addPackage(deps.pkgs.zigimg);
 
-        const copy_seizerjs = b.addInstallBinFile(deps.base_dirs.seizer ++ "src/web/seizer.js", "seizer.js");
+        const copy_seizerjs = b.addInstallBinFile(deps.base_dirs.seizer ++ "/src/web/seizer.js", "seizer.js");
 
         const copy_www = b.addInstallDirectory(.{
             .source_dir = "www",
