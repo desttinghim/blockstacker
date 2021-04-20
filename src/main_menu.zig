@@ -78,8 +78,9 @@ var setup_menu: Menu = undefined;
 var setup_level_label: []u8 = undefined;
 
 fn setup_init(ctx: *Context) void {
-    setup_level_label = ctx.allocator.dupe(u8, "Level: 0") catch @panic("Couldn't setup label");
+    setup_level_label = std.fmt.allocPrint(ctx.allocator, "Level: {}", .{ctx.setup.level}) catch @panic("Couldn't format label");
     errdefer ctx.allocator.free(setup_level_label);
+
     const menu_items = [_]MenuItem{
         .{ .label = "Start Game", .onaction = setup_action_start_game },
         .{ .label = setup_level_label, .onspin = setup_spin_level },
