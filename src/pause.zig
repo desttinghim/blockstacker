@@ -54,6 +54,8 @@ fn event(ctx: *Context, evt: seizer.event.Event) void {
 fn render(ctx: *Context, alpha: f64) void {
     const screen_size_f = seizer.getScreenSize().intToFloat(f32);
 
+    gl.clear(gl.COLOR_BUFFER_BIT);
+
     const menu_size = menu.getMinSize(ctx);
     const menu_pos = screen_size_f.subv(menu_size).scaleDiv(2);
     menu.render(ctx, alpha, menu_pos);
