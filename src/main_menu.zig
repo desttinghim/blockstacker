@@ -27,7 +27,7 @@ fn init(ctx: *Context) void {
 }
 
 fn deinit(ctx: *Context) void {
-    menu.deinit();
+    menu.deinit(ctx);
 }
 
 fn action_setup_game(ctx: *Context, _: *MenuItem) void {
@@ -75,22 +75,20 @@ pub const SetupScreen: Screen = .{
 };
 
 var setup_menu: Menu = undefined;
-var setup_level_label: []u8 = undefined;
 
 fn setup_init(ctx: *Context) void {
-    setup_level_label = std.fmt.allocPrint(ctx.allocator, "Level: {}", .{ctx.setup.level}) catch @panic("Couldn't format label");
-    errdefer ctx.allocator.free(setup_level_label);
+    const level_label = std.fmt.allocPrint(ctx.allocator, "Level: {}", .{ctx.setup.level}) catch @panic("Couldn't format label");
+    errdefer ctx.allocator.free(level_label);
 
     const menu_items = [_]MenuItem{
         .{ .label = "Start Game", .onaction = setup_action_start_game },
-        .{ .label = setup_level_label, .onspin = setup_spin_level },
+        .{ .label = level_label, .onspin = setup_spin_level, .ondeinit = spinner_deinit },
     };
     setup_menu = Menu.init(ctx.allocator, &menu_items) catch @panic("Couldn't set up menu");
 }
 
 fn setup_deinit(ctx: *Context) void {
-    setup_menu.deinit();
-    ctx.allocator.free(setup_level_label);
+    setup_menu.deinit(ctx);
 }
 
 fn setup_action_start_game(ctx: *Context, _: *MenuItem) void {
@@ -104,8 +102,11 @@ fn setup_spin_level(ctx: *Context, item: *MenuItem, increase: bool) void {
         ctx.setup.level -= 1;
     }
     ctx.allocator.free(item.label);
-    setup_level_label = std.fmt.allocPrint(ctx.allocator, "Level: {}", .{ctx.setup.level}) catch @panic("Couldn't format label");
-    item.label = setup_level_label;
+    item.label = std.fmt.allocPrint(ctx.allocator, "Level: {}", .{ctx.setup.level}) catch @panic("Couldn't format label");
+}
+
+fn spinner_deinit(ctx: *Context, item: *MenuItem) void {
+    ctx.allocator.free(item.label);
 }
 
 fn setup_event(ctx: *Context, evt: seizer.event.Event) void {

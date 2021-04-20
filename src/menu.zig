@@ -21,7 +21,10 @@ pub const Menu = struct {
         };
     }
 
-    pub fn deinit(this: *@This()) void {
+    pub fn deinit(this: *@This(), ctx: *Context) void {
+        for (this.menuItems.items) |*item| {
+            item.ondeinit(ctx, item);
+        }
         this.menuItems.deinit();
     }
 
@@ -103,7 +106,9 @@ pub const MenuItem = struct {
     label: []const u8,
     onaction: fn (*Context, *MenuItem) void = null_action,
     onspin: fn (*Context, *MenuItem, bool) void = null_spin,
+    ondeinit: fn (*Context, *MenuItem) void = null_deinit,
 
     fn null_action(ctx: *Context, menuItem: *MenuItem) void {}
     fn null_spin(ctx: *Context, menuItem: *MenuItem, increase: bool) void {}
+    fn null_deinit(ctx: *Context, menuItem: *MenuItem) void {}
 };

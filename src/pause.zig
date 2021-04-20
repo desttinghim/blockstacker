@@ -27,7 +27,7 @@ fn init(ctx: *Context) void {
 }
 
 fn deinit(ctx: *Context) void {
-    menu.deinit();
+    menu.deinit(ctx);
 }
 
 fn action_resume(ctx: *Context, _: *MenuItem) void {

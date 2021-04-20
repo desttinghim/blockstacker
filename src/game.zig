@@ -366,7 +366,7 @@ fn go_init(ctx: *Context) void {
 }
 
 fn go_deinit(ctx: *Context) void {
-    go_menu.deinit();
+    go_menu.deinit(ctx);
 }
 
 fn go_action_restart(ctx: *Context, _: *MenuItem) void {
