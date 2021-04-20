@@ -6,9 +6,9 @@ const Menu = @import("menu.zig").Menu;
 const gl = seizer.gl;
 const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
-const MainMenuScreen = @import("main_menu.zig").MainMenuScreen;
+const GameScreen = @import("game.zig").GameScreen;
 
-pub const PauseScreen: Screen = .{
+pub const MainMenuScreen: Screen = .{
     .init = init,
     .event = event,
     .render = render,
@@ -17,19 +17,16 @@ pub const PauseScreen: Screen = .{
 var menu: Menu = undefined;
 
 fn init(ctx: *Context) void {
+    // TODO: Add settings screen for settings that don't affect gameplay
     menu = Menu.init(&.{
-        .{ .Action = .{ .label = "Resume", .onaction = action_resume } },
-        .{ .Action = .{ .label = "Main Menu", .onaction = action_main_menu } },
+        .{ .Action = .{ .label = "Start Game", .onaction = action_setup_game } },
         .{ .Action = .{ .label = "Quit", .onaction = action_quit } },
     });
 }
 
-fn action_resume(ctx: *Context) void {
-    ctx.pop_screen();
-}
-
-fn action_main_menu(ctx: *Context) void {
-    ctx.set_screen(MainMenuScreen) catch |e| @panic("Couldn't set screen");
+fn action_setup_game(ctx: *Context) void {
+    // TODO: Go to setup screen instead of directly to game
+    ctx.set_screen(GameScreen) catch @panic("Switching screen somehow caused allocation");
 }
 
 fn action_quit(_ctx: *Context) void {
@@ -38,25 +35,23 @@ fn action_quit(_ctx: *Context) void {
 
 fn event(ctx: *Context, evt: seizer.event.Event) void {
     menu.event(ctx, evt);
-    switch (evt) {
-        .KeyDown => |e| switch (e.scancode) {
-            .ESCAPE => ctx.pop_screen(),
-            else => {},
-        },
-        .ControllerButtonDown => |cbutton| switch (cbutton.button) {
-            .START, .B => ctx.pop_screen(),
-            else => {},
-        },
-        .Quit => seizer.quit(),
-        else => {},
+    if (evt == .Quit) {
+        seizer.quit();
     }
 }
 
 fn render(ctx: *Context, alpha: f64) void {
-    const screen_size_f = seizer.getScreenSize().intToFloat(f32);
+    const screen_size = seizer.getScreenSize();
+    const screen_size_f = screen_size.intToFloat(f32);
 
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.viewport(0, 0, screen_size.x, screen_size.y);
 
+    ctx.flat.setSize(screen_size_f);
+
+    ctx.font.drawText(&ctx.flat, "BLOCKSTACKER", vec2f(screen_size_f.x / 2, 16), .{ .scale = 2, .textAlign = .Center, .textBaseline = .Top });
+    
     const menu_size = menu.getMinSize(ctx);
     const menu_pos = screen_size_f.subv(menu_size).scaleDiv(2);
     menu.render(ctx, alpha, menu_pos);

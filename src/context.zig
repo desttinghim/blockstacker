@@ -45,6 +45,14 @@ pub const Context = struct {
             screen.deinit(self);
         }
     }
+    
+    pub fn set_screen(self: *@This(), new_screen: Screen) !void {
+        for (self.screens.items) |screen| {
+            screen.deinit(self);
+        }
+        self.screens.shrinkRetainingCapacity(0);
+        try self.push_screen(new_screen);
+    }
 };
 
 pub const Screen = struct {

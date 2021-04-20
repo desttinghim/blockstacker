@@ -5,6 +5,7 @@ const FontRenderer = @import("font_render.zig").BitmapFontRenderer;
 const Texture = @import("texture.zig").Texture;
 const Context = @import("context.zig").Context;
 const Screen = @import("context.zig").Screen;
+const MainMenuScreen = @import("main_menu.zig").MainMenuScreen;
 const GameScreen = @import("game.zig").GameScreen;
 const ScoreEntry = @import("score.zig").ScoreEntry;
 
@@ -44,7 +45,7 @@ pub fn onInit() !void {
         .scores = std.ArrayList(ScoreEntry).init(allocator),
     };
 
-    try ctx.push_screen(GameScreen);
+    try ctx.push_screen(MainMenuScreen);
 }
 
 pub fn onDeinit() void {
