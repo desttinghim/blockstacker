@@ -6,3 +6,4 @@ tmp/
 .zigmod
 zig-cache
 deps.zig
+.gyro

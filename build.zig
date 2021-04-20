@@ -30,7 +30,8 @@ pub fn build(b: *std.build.Builder) void {
         exe.linkSystemLibrary("SDL2");
     }
 
-    deps.addAllTo(exe);
+    exe.addPackage(deps.pkgs.seizer);
+    exe.addPackage(deps.pkgs.zigimg);
 
     // Install assets alongside binary
     const copy_assets = b.addInstallDirectory(.{
@@ -48,4 +49,33 @@ pub fn build(b: *std.build.Builder) void {
 
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
+
+    {
+        const web = b.addStaticLibrary("blockstacker", "src/main.zig");
+        web.setBuildMode(mode);
+        web.override_dest_dir = .Bin;
+        web.setTarget(.{
+            .cpu_arch = .wasm32,
+            .os_tag = .freestanding,
+        });
+        web.install();
+
+        web.addPackage(deps.pkgs.seizer);
+        web.addPackage(deps.pkgs.zigimg);
+
+        const copy_seizerjs = b.addInstallBinFile(deps.base_dirs.seizer ++ "src/web/seizer.js", "seizer.js");
+
+        const copy_www = b.addInstallDirectory(.{
+            .source_dir = "www",
+            .install_dir = .Bin,
+            .install_subdir = "",
+        });
+
+        const build_web = b.step("web", "Build WASM application");
+        build_web.dependOn(&web.step);
+        build_web.dependOn(&web.install_step.?.step);
+        build_web.dependOn(&copy_assets.step);
+        build_web.dependOn(&copy_seizerjs.step);
+        build_web.dependOn(&copy_www.step);
+    }
 }

@@ -30,7 +30,10 @@ pub fn get_bag() [7]PieceType {
 }
 
 pub fn shuffled_bag(ctx: Context) [7]PieceType {
-    var rng = std.rand.DefaultPrng.init(@intCast(u64, std.time.milliTimestamp()));
+    var seed: u64 = undefined;
+    seizer.randomBytes(std.mem.asBytes(&seed));
+    var rng = std.rand.DefaultPrng.init(seed);
+
     var rand = &rng.random;
     var bag = @This().get_bag();
     var i: usize = 0;
@@ -42,7 +45,6 @@ pub fn shuffled_bag(ctx: Context) [7]PieceType {
     }
     return bag;
 }
-
 
 pub const Piece = struct {
     items: [25]Block,

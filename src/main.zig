@@ -30,7 +30,10 @@ var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 var rng: std.rand.DefaultPrng = undefined;
 
 pub fn onInit() !void {
-    rng = std.rand.DefaultPrng.init(@intCast(u64, std.time.milliTimestamp()));
+    var seed: u64 = undefined;
+    seizer.randomBytes(std.mem.asBytes(&seed));
+    rng = std.rand.DefaultPrng.init(seed);
+
     var allocator = &gpa.allocator;
     var load_tileset = async Texture.initFromFile(allocator, "assets/blocks.png");
     var load_font = async FontRenderer.initFromFile(allocator, "assets/PressStart2P_8.fnt");
@@ -73,3 +76,23 @@ pub fn render(alpha: f64) !void {
 pub fn update(current_time: f64, delta: f64) anyerror!void {
     ctx.current_screen().update(&ctx, current_time, delta);
 }
+
+pub const log = seizer.log;
+pub const panic = seizer.panic;
+pub usingnamespace if (std.builtin.os.tag == .freestanding)
+    struct {
+        pub const os = struct {
+            pub const bits = struct {
+                pub const fd_t = i32;
+                pub const STDOUT_FILENO = 0;
+                pub const STDERR_FILENO = 1;
+            };
+            pub const system = struct {
+                pub fn isatty(x: anytype) i32 {
+                    return 0;
+                }
+            };
+        };
+    }
+else
+    struct {};
