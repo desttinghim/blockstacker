@@ -363,6 +363,7 @@ fn go_event(ctx: *Context, evt: seizer.event.Event) void {
         .KeyDown => |e| switch (e.scancode) {
             else => button_pressed = true,
         },
+        .ControllerButtonDown => button_pressed = true,
         .Quit => seizer.quit(),
         else => {},
     }
