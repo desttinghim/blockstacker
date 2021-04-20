@@ -40,7 +40,7 @@ fn event(ctx: *Context, evt: seizer.event.Event) void {
     menu.event(ctx, evt);
     switch (evt) {
         .KeyDown => |e| switch (e.scancode) {
-            .ESCAPE => ctx.pop_screen(),
+            .X, .ESCAPE => ctx.pop_screen(),
             else => {},
         },
         .ControllerButtonDown => |cbutton| switch (cbutton.button) {
