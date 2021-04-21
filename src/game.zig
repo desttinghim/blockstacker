@@ -84,6 +84,10 @@ var score: usize = undefined;
 var level: usize = undefined;
 var level_at: usize = undefined;
 
+const REPEAT_TIME = 0.1;
+var move_left_timer: f64 = undefined;
+var move_right_timer: f64 = undefined;
+
 var score_text: []u8 = undefined;
 var level_text: []u8 = undefined;
 var lines_text: []u8 = undefined;
@@ -150,10 +154,18 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
         .KeyDown => |e| switch (e.scancode) {
             .Z, .COMMA => inputs.rot_ws = .JustPressed,
             .X, .PERIOD => inputs.rot_cw = .JustPressed,
-            .A, .LEFT => inputs.left = .JustPressed,
-            .D, .RIGHT => inputs.right = .JustPressed,
-            .S, .DOWN => inputs.down = .JustPressed,
-            .W, .UP => inputs.hardDrop = .JustPressed,
+            .A, .LEFT => if (inputs.left != .Pressed) {
+                inputs.left = .JustPressed;
+            },
+            .D, .RIGHT => if (inputs.right != .Pressed) {
+                inputs.right = .JustPressed;
+            },
+            .S, .DOWN => if (inputs.right != .Pressed) {
+                inputs.down = .JustPressed;
+            },
+            .W, .UP => if (inputs.right != .Pressed) {
+                inputs.hardDrop = .JustPressed;
+            },
 
             .ESCAPE => ctx.push_screen(PauseScreen) catch @panic("Could not push screen"),
             else => {},
@@ -171,8 +183,12 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
         .ControllerButtonDown => |cbutton| switch (cbutton.button) {
             .DPAD_UP => inputs.hardDrop = .JustPressed,
             .DPAD_DOWN => inputs.down = .JustPressed,
-            .DPAD_LEFT => inputs.left = .JustPressed,
-            .DPAD_RIGHT => inputs.right = .JustPressed,
+            .DPAD_LEFT => if (inputs.left != .Pressed) {
+                inputs.left = .JustPressed;
+            },
+            .DPAD_RIGHT => if (inputs.right != .Pressed) {
+                inputs.right = .JustPressed;
+            },
             .START => ctx.push_screen(PauseScreen) catch @panic("Could not push screen"),
             .A => inputs.rot_ws = .JustPressed,
             .B => inputs.rot_cw = .JustPressed,
@@ -196,8 +212,19 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
     {
         var new_piece = piece;
         var new_pos = piece_pos;
-        if (inputs.right == .JustPressed) new_pos = new_pos.add(1, 0);
-        if (inputs.left == .JustPressed) new_pos = new_pos.sub(1, 0);
+
+        move_right_timer -= delta;
+        if (inputs.right == .JustPressed or (inputs.right == .Pressed and move_right_timer < 0)) {
+            new_pos = new_pos.add(1, 0);
+            move_right_timer = REPEAT_TIME;
+        }
+
+        move_left_timer -= delta;
+        if (inputs.left == .JustPressed or (inputs.left == .Pressed and move_left_timer < 0)) {
+            new_pos = new_pos.sub(1, 0);
+            move_left_timer = REPEAT_TIME;
+        }
+
         if (inputs.rot_ws == .JustPressed) new_piece.rotate_ws();
         if (inputs.rot_cw == .JustPressed) new_piece.rotate_cw();
 
@@ -282,8 +309,14 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
     // Update input state
     if (inputs.hardDrop == .JustPressed) inputs.hardDrop = .Pressed;
     if (inputs.down == .JustPressed) inputs.down = .Pressed;
-    if (inputs.left == .JustPressed) inputs.left = .Pressed;
-    if (inputs.right == .JustPressed) inputs.right = .Pressed;
+    if (inputs.left == .JustPressed) {
+        inputs.left = .Pressed;
+        move_left_timer = REPEAT_TIME * 2.0;
+    }
+    if (inputs.right == .JustPressed) {
+        inputs.right = .Pressed;
+        move_left_timer = REPEAT_TIME * 2.0;
+    }
     if (inputs.rot_ws == .JustPressed) inputs.rot_ws = .Pressed;
     if (inputs.rot_cw == .JustPressed) inputs.rot_cw = .Pressed;
 }
