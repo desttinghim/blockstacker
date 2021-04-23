@@ -17,14 +17,8 @@ pub const Context = struct {
     setup: Setup,
 
     pub fn add_score(self: *@This(), name: []const u8, score: usize) !void {
-        var i: usize = 0;
-        while (i < self.scores.items.len) {
-            if (self.scores.items[i].score <= score) {
-                try self.scores.insert(i, .{ .name = name, .score = score });
-                return;
-            }
-        }
         try self.scores.append(.{ .name = name, .score = score });
+        std.sort.sort(ScoreEntry, self.scores.items, {}, ScoreEntry.lessThan);
     }
 
     pub fn current_screen(self: *@This()) Screen {

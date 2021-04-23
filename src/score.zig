@@ -45,4 +45,8 @@ pub fn get_soft_drop_delta() f32 {
 pub const ScoreEntry = struct {
     name: []const u8,
     score: usize,
+
+    pub fn lessThan(_ctx: void, lhs: @This(), rhs: @This()) bool {
+        return lhs.score < rhs.score;
+    }
 };
