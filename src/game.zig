@@ -152,7 +152,7 @@ pub fn deinit(ctx: *Context) void {
 pub fn event(ctx: *Context, evt: seizer.event.Event) void {
     switch (evt) {
         .KeyDown => |e| switch (e.scancode) {
-            .Z, .COMMA => inputs.rot_ws = .JustPressed,
+            .Z, .COMMA, .SPACE => inputs.rot_ws = .JustPressed,
             .X, .PERIOD => inputs.rot_cw = .JustPressed,
             .A, .LEFT => if (inputs.left != .Pressed) {
                 inputs.left = .JustPressed;
