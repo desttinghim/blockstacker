@@ -37,6 +37,7 @@ pub fn onInit() !void {
     var allocator = &gpa.allocator;
     var load_tileset = async Texture.initFromFile(allocator, "assets/blocks.png");
     var load_font = async FontRenderer.initFromFile(allocator, "assets/PressStart2P_8.fnt");
+    var load_hello_sound = async seizer.audio.engine.load(allocator, "assets/hello.wav", 2 * 1024 * 1024);
 
     ctx = .{
         .tileset_tex = try await load_tileset,
@@ -47,6 +48,9 @@ pub fn onInit() !void {
         .screens = std.ArrayList(Screen).init(allocator),
         .scores = std.ArrayList(ScoreEntry).init(allocator),
         .setup = .{},
+        .sounds = .{
+            .move = try await load_hello_sound,
+        },
     };
 
     try ctx.push_screen(MainMenuScreen);

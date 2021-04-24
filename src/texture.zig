@@ -9,7 +9,7 @@ pub const Texture = struct {
     size: math.Vec(2, usize),
 
     pub fn initFromFile(alloc: *std.mem.Allocator, filePath: []const u8) !@This() {
-        const image_contents = try seizer.fetch(alloc, filePath);
+        const image_contents = try seizer.fetch(alloc, filePath, 50000);
         defer alloc.free(image_contents);
 
         const load_res = try zigimg.Image.fromMemory(alloc, image_contents);

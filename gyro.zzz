@@ -4,7 +4,7 @@ deps:
       github:
         user: leroycep
         repo: seizer
-        ref: controllers
+        ref: audioengine
     root: src/seizer.zig
   zigimg:
     src:

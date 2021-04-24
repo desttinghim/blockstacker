@@ -15,6 +15,9 @@ pub const Context = struct {
     screens: std.ArrayList(Screen),
     scores: std.ArrayList(ScoreEntry),
     setup: Setup,
+    sounds: struct {
+        move: seizer.audio.SoundHandle,
+    },
 
     pub fn add_score(self: *@This(), name: []const u8, score: usize) !void {
         try self.scores.append(.{ .name = name, .score = score });
@@ -41,7 +44,7 @@ pub const Context = struct {
             screen.deinit(self);
         }
     }
-    
+
     pub fn set_screen(self: *@This(), new_screen: Screen) !void {
         for (self.screens.items) |screen| {
             screen.deinit(self);

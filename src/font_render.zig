@@ -11,6 +11,8 @@ const util = @import("util");
 const Vec2f = math.Vec(2, f32);
 const vec2f = Vec2f.init;
 
+const MAX_FILESIZE = 50000;
+
 pub const BitmapFontRenderer = struct {
     pages: []Texture,
     glyphs: std.AutoHashMap(u32, Glyph),
@@ -27,7 +29,7 @@ pub const BitmapFontRenderer = struct {
     };
 
     pub fn initFromFile(allocator: *std.mem.Allocator, filename: []const u8) !@This() {
-        const contents = try seizer.fetch(allocator, filename);
+        const contents = try seizer.fetch(allocator, filename, MAX_FILESIZE);
         defer allocator.free(contents);
 
         const base_path = std.fs.path.dirname(filename) orelse "./";

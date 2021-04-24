@@ -50,7 +50,7 @@ pub fn build(b: *std.build.Builder) void {
     const run_step = b.step("run", "Run the app");
     run_step.dependOn(&run_cmd.step);
 
-    {
+    if (false) {
         const web = b.addStaticLibrary("blockstacker", "src/main.zig");
         web.setBuildMode(mode);
         web.override_dest_dir = .Bin;

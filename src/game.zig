@@ -228,6 +228,8 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
         if (inputs.rot_ws == .JustPressed) new_piece.rotate_ws();
         if (inputs.rot_cw == .JustPressed) new_piece.rotate_cw();
 
+        if (inputs.rot_ws == .JustPressed or inputs.rot_cw == .JustPressed) seizer.audio.engine.play(ctx.sounds.move);
+
         if (!new_piece.collides_with(new_pos, &grid)) {
             piece = new_piece;
             piece_pos = new_pos;
