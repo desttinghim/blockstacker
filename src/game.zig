@@ -230,7 +230,9 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
         if (inputs.rot_ws == .JustPressed) new_piece.rotate_ws();
         if (inputs.rot_cw == .JustPressed) new_piece.rotate_cw();
 
-        if (inputs.rot_ws == .JustPressed or inputs.rot_cw == .JustPressed) seizer.audio.engine.play(ctx.sounds.rotate);
+        if (inputs.rot_ws == .JustPressed or inputs.rot_cw == .JustPressed) {
+            ctx.audioEngine.play(ctx.sounds.rotate);
+        }
 
         if (!new_piece.collides_with(new_pos, &grid)) {
             piece = new_piece;
@@ -249,7 +251,7 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
     } else if ((inputs.down == .Pressed and last_time > get_soft_drop_delta()) or
         inputs.down == .JustPressed or current_time - last_time > get_drop_delta(level))
     {
-        seizer.audio.engine.play(ctx.sounds.move[clock]);
+        ctx.audioEngine.play(ctx.sounds.move[clock]);
         clock = (clock + 1) % 8;
         var new_pos = piece_pos;
         new_pos = new_pos.add(0, 1);
