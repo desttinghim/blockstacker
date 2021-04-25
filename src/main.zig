@@ -82,6 +82,12 @@ pub fn onDeinit() void {
     ctx.scores.deinit();
     ctx.font.deinit();
     ctx.flat.deinit();
+
+    seizer.audio.engine.deinit(ctx.sounds.rotate);
+    for (ctx.sounds.move) |sound| {
+        seizer.audio.engine.deinit(sound);
+    }
+
     _ = gpa.deinit();
 }
 
