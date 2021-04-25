@@ -16,7 +16,8 @@ pub const Context = struct {
     scores: std.ArrayList(ScoreEntry),
     setup: Setup,
     sounds: struct {
-        move: seizer.audio.SoundHandle,
+        rotate: seizer.audio.SoundHandle,
+        move: [8]seizer.audio.SoundHandle,
     },
 
     pub fn add_score(self: *@This(), name: []const u8, score: usize) !void {

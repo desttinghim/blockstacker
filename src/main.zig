@@ -37,7 +37,15 @@ pub fn onInit() !void {
     var allocator = &gpa.allocator;
     var load_tileset = async Texture.initFromFile(allocator, "assets/blocks.png");
     var load_font = async FontRenderer.initFromFile(allocator, "assets/PressStart2P_8.fnt");
-    var load_hello_sound = async seizer.audio.engine.load(allocator, "assets/hello.wav", 2 * 1024 * 1024);
+    var load_hello_sound = async seizer.audio.engine.load(allocator, "assets/slideswitch.wav", 2 * 1024 * 1024);
+    var load_clock0_sound = async seizer.audio.engine.load(allocator, "assets/clock0.wav", 2 * 1024 * 1024);
+    var load_clock1_sound = async seizer.audio.engine.load(allocator, "assets/clock1.wav", 2 * 1024 * 1024);
+    var load_clock2_sound = async seizer.audio.engine.load(allocator, "assets/clock2.wav", 2 * 1024 * 1024);
+    var load_clock3_sound = async seizer.audio.engine.load(allocator, "assets/clock3.wav", 2 * 1024 * 1024);
+    var load_clock4_sound = async seizer.audio.engine.load(allocator, "assets/clock4.wav", 2 * 1024 * 1024);
+    var load_clock5_sound = async seizer.audio.engine.load(allocator, "assets/clock5.wav", 2 * 1024 * 1024);
+    var load_clock6_sound = async seizer.audio.engine.load(allocator, "assets/clock6.wav", 2 * 1024 * 1024);
+    var load_clock7_sound = async seizer.audio.engine.load(allocator, "assets/clock7.wav", 2 * 1024 * 1024);
 
     ctx = .{
         .tileset_tex = try await load_tileset,
@@ -49,7 +57,17 @@ pub fn onInit() !void {
         .scores = std.ArrayList(ScoreEntry).init(allocator),
         .setup = .{},
         .sounds = .{
-            .move = try await load_hello_sound,
+            .rotate = try await load_hello_sound,
+            .move = .{
+                try await load_clock0_sound,
+                try await load_clock1_sound,
+                try await load_clock2_sound,
+                try await load_clock3_sound,
+                try await load_clock4_sound,
+                try await load_clock5_sound,
+                try await load_clock6_sound,
+                try await load_clock7_sound,
+            },
         },
     };
 
