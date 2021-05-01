@@ -1,0 +1,7 @@
+- [ ] Switch restart pause menu option for `setup` option
+- [ ] Implement saving and loading highscores
+- [ ] Allow user to press and hold dpad to select menu options
+- [ ] Add sounds to menu screen
+- [ ] Implement wall kicks
+- [ ] Implement piece holding
+- [ ] Implement viewing multiple pieces into the future

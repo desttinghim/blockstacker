@@ -5,6 +5,7 @@ const FontRenderer = @import("font_render.zig").BitmapFontRenderer;
 const Texture = @import("texture.zig").Texture;
 const ScoreEntry = @import("score.zig").ScoreEntry;
 const Setup = @import("game.zig").Setup;
+const audio = seizer.audio;
 
 pub const Context = struct {
     flat: FlatRenderer,
@@ -15,6 +16,15 @@ pub const Context = struct {
     screens: std.ArrayList(Screen),
     scores: std.ArrayList(ScoreEntry),
     setup: Setup,
+    audioEngine: *audio.Engine,
+    clips: struct {
+        rotate: seizer.audio.SoundHandle,
+        move: [8]seizer.audio.SoundHandle,
+    },
+    sounds: struct {
+        rotate: seizer.audio.NodeHandle,
+        move: seizer.audio.NodeHandle,
+    },
 
     pub fn add_score(self: *@This(), name: []const u8, score: usize) !void {
         try self.scores.append(.{ .name = name, .score = score });
@@ -41,7 +51,7 @@ pub const Context = struct {
             screen.deinit(self);
         }
     }
-    
+
     pub fn set_screen(self: *@This(), new_screen: Screen) !void {
         for (self.screens.items) |screen| {
             screen.deinit(self);

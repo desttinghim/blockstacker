@@ -8,6 +8,7 @@ const Screen = @import("context.zig").Screen;
 const MainMenuScreen = @import("main_menu.zig").MainMenuScreen;
 const GameScreen = @import("game.zig").GameScreen;
 const ScoreEntry = @import("score.zig").ScoreEntry;
+const audio = seizer.audio;
 
 pub fn main() void {
     seizer.run(.{
@@ -28,6 +29,7 @@ pub fn main() void {
 var ctx: Context = undefined;
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};
 var rng: std.rand.DefaultPrng = undefined;
+var audioEngine: audio.Engine = undefined;
 
 pub fn onInit() !void {
     var seed: u64 = undefined;
@@ -35,8 +37,18 @@ pub fn onInit() !void {
     rng = std.rand.DefaultPrng.init(seed);
 
     var allocator = &gpa.allocator;
+    try audioEngine.init(allocator);
     var load_tileset = async Texture.initFromFile(allocator, "assets/blocks.png");
     var load_font = async FontRenderer.initFromFile(allocator, "assets/PressStart2P_8.fnt");
+    var load_hello_sound = async audioEngine.load(allocator, "assets/slideswitch.wav", 2 * 1024 * 1024);
+    var load_clock0_sound = async audioEngine.load(allocator, "assets/clock0.wav", 2 * 1024 * 1024);
+    var load_clock1_sound = async audioEngine.load(allocator, "assets/clock1.wav", 2 * 1024 * 1024);
+    var load_clock2_sound = async audioEngine.load(allocator, "assets/clock2.wav", 2 * 1024 * 1024);
+    var load_clock3_sound = async audioEngine.load(allocator, "assets/clock3.wav", 2 * 1024 * 1024);
+    var load_clock4_sound = async audioEngine.load(allocator, "assets/clock4.wav", 2 * 1024 * 1024);
+    var load_clock5_sound = async audioEngine.load(allocator, "assets/clock5.wav", 2 * 1024 * 1024);
+    var load_clock6_sound = async audioEngine.load(allocator, "assets/clock6.wav", 2 * 1024 * 1024);
+    var load_clock7_sound = async audioEngine.load(allocator, "assets/clock7.wav", 2 * 1024 * 1024);
 
     ctx = .{
         .tileset_tex = try await load_tileset,
@@ -47,7 +59,47 @@ pub fn onInit() !void {
         .screens = std.ArrayList(Screen).init(allocator),
         .scores = std.ArrayList(ScoreEntry).init(allocator),
         .setup = .{},
+        .audioEngine = &audioEngine,
+        .clips = .{
+            .rotate = try await load_hello_sound,
+            .move = .{
+                try await load_clock0_sound,
+                try await load_clock1_sound,
+                try await load_clock2_sound,
+                try await load_clock3_sound,
+                try await load_clock4_sound,
+                try await load_clock5_sound,
+                try await load_clock6_sound,
+                try await load_clock7_sound,
+            },
+        },
+        .sounds = undefined,
     };
+
+    ctx.sounds.rotate = audioEngine.createSoundNode();
+    audioEngine.connectToOutput(ctx.sounds.rotate);
+
+    ctx.sounds.move = audioEngine.createSoundNode();
+    const delay1_output_node = try audioEngine.createDelayOutputNode(0.011111);
+    const delay2_output_node = try audioEngine.createDelayOutputNode(0.009091);
+    const filter1_node = audioEngine.createBiquadNode(delay1_output_node, .{ .kind = .bandpass, .freq = 90, .q = 3 });
+    const filter2_node = audioEngine.createBiquadNode(delay2_output_node, .{ .kind = .bandpass, .freq = 110, .q = 3 });
+
+    const volume1_node = try audioEngine.createMixerNode(&[_]audio.MixerInput{
+        .{ .handle = ctx.sounds.move, .gain = 1.0 },
+        .{ .handle = filter1_node, .gain = 0.3 },
+    });
+    const volume2_node = try audioEngine.createMixerNode(&[_]audio.MixerInput{
+        .{ .handle = ctx.sounds.move, .gain = 1.0 },
+        .{ .handle = filter1_node, .gain = 0.3 },
+        .{ .handle = filter2_node, .gain = 0.3 },
+    });
+    const delay1_input_node = try audioEngine.createDelayInputNode(volume1_node, delay1_output_node);
+    const delay2_input_node = try audioEngine.createDelayInputNode(volume2_node, delay2_output_node);
+
+    audioEngine.connectToOutput(ctx.sounds.move);
+    audioEngine.connectToOutput(filter1_node);
+    audioEngine.connectToOutput(filter2_node);
 
     try ctx.push_screen(MainMenuScreen);
 }
@@ -60,6 +112,14 @@ pub fn onDeinit() void {
     ctx.scores.deinit();
     ctx.font.deinit();
     ctx.flat.deinit();
+
+    audioEngine.freeSound(ctx.clips.rotate);
+    for (ctx.clips.move) |clip| {
+        audioEngine.freeSound(clip);
+    }
+
+    audioEngine.deinit();
+
     _ = gpa.deinit();
 }
 

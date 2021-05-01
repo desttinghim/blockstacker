@@ -64,6 +64,7 @@ pub fn build(b: *std.build.Builder) void {
         web.addPackage(deps.pkgs.zigimg);
 
         const copy_seizerjs = b.addInstallBinFile(deps.base_dirs.seizer ++ "/src/web/seizer.js", "seizer.js");
+        const copy_audio_enginejs = b.addInstallBinFile(deps.base_dirs.seizer ++ "/src/web/audio_engine.js", "audio_engine.js");
 
         const copy_www = b.addInstallDirectory(.{
             .source_dir = "www",
@@ -76,6 +77,7 @@ pub fn build(b: *std.build.Builder) void {
         build_web.dependOn(&web.install_step.?.step);
         build_web.dependOn(&copy_assets.step);
         build_web.dependOn(&copy_seizerjs.step);
+        build_web.dependOn(&copy_audio_enginejs.step);
         build_web.dependOn(&copy_www.step);
     }
 }

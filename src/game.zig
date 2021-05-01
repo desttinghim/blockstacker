@@ -83,6 +83,7 @@ var cleared_rows: usize = undefined;
 var score: usize = undefined;
 var level: usize = undefined;
 var level_at: usize = undefined;
+var clock: usize = 0;
 
 const REPEAT_TIME = 0.1;
 var move_left_timer: f64 = undefined;
@@ -124,6 +125,7 @@ pub fn init(ctx: *Context) void {
     grab = 0;
     cleared_rows = 0;
     score = 0;
+    clock = 0;
     set_level(ctx.setup.level);
 
     score_text = std.fmt.allocPrint(ctx.allocator, "{}", .{0}) catch |e| {
@@ -228,6 +230,10 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
         if (inputs.rot_ws == .JustPressed) new_piece.rotate_ws();
         if (inputs.rot_cw == .JustPressed) new_piece.rotate_cw();
 
+        if (inputs.rot_ws == .JustPressed or inputs.rot_cw == .JustPressed) {
+            ctx.audioEngine.play(ctx.sounds.rotate, ctx.clips.rotate);
+        }
+
         if (!new_piece.collides_with(new_pos, &grid)) {
             piece = new_piece;
             piece_pos = new_pos;
@@ -245,6 +251,8 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
     } else if ((inputs.down == .Pressed and last_time > get_soft_drop_delta()) or
         inputs.down == .JustPressed or current_time - last_time > get_drop_delta(level))
     {
+        ctx.audioEngine.play(ctx.sounds.move, ctx.clips.move[clock]);
+        clock = (clock + 1) % 8;
         var new_pos = piece_pos;
         new_pos = new_pos.add(0, 1);
         if (piece.collides_with(new_pos, &grid)) {
