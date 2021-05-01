@@ -231,7 +231,7 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
         if (inputs.rot_cw == .JustPressed) new_piece.rotate_cw();
 
         if (inputs.rot_ws == .JustPressed or inputs.rot_cw == .JustPressed) {
-            ctx.audioEngine.play(ctx.sounds.rotate);
+            ctx.audioEngine.play(ctx.sounds.rotate, ctx.clips.rotate);
         }
 
         if (!new_piece.collides_with(new_pos, &grid)) {
@@ -251,7 +251,7 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
     } else if ((inputs.down == .Pressed and last_time > get_soft_drop_delta()) or
         inputs.down == .JustPressed or current_time - last_time > get_drop_delta(level))
     {
-        ctx.audioEngine.play(ctx.sounds.move[clock]);
+        ctx.audioEngine.play(ctx.sounds.move, ctx.clips.move[clock]);
         clock = (clock + 1) % 8;
         var new_pos = piece_pos;
         new_pos = new_pos.add(0, 1);

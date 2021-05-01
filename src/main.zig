@@ -76,46 +76,28 @@ pub fn onInit() !void {
         .sounds = undefined,
     };
 
-    ctx.sounds.rotate = audioEngine.createSoundNode(ctx.clips.rotate);
+    ctx.sounds.rotate = audioEngine.createSoundNode();
     audioEngine.connectToOutput(ctx.sounds.rotate);
 
-    const delay1_sec = 0.011111;
-    const delay1_freq = 90;
-    const delay2_sec = 0.009091;
-    const delay2_freq = 110;
-    const sample_rate = @intToFloat(f32, ctx.audioEngine.spec.freq);
+    ctx.sounds.move = audioEngine.createSoundNode();
+    const delay1_output_node = try audioEngine.createDelayOutputNode(0.011111);
+    const delay2_output_node = try audioEngine.createDelayOutputNode(0.009091);
+    const filter1_node = audioEngine.createBiquadNode(delay1_output_node, .{ .kind = .bandpass, .freq = 90, .q = 3 });
+    const filter2_node = audioEngine.createBiquadNode(delay2_output_node, .{ .kind = .bandpass, .freq = 110, .q = 3 });
 
-    for (ctx.clips.move) |clip, i| {
-        ctx.sounds.move[i] = audioEngine.createSoundNode(clip);
-    }
-    const mixer_node = try audioEngine.createMixerNode(&[_]audio.NodeInput{
-        .{ .handle = ctx.sounds.move[0] },
-        .{ .handle = ctx.sounds.move[1] },
-        .{ .handle = ctx.sounds.move[2] },
-        .{ .handle = ctx.sounds.move[3] },
-        .{ .handle = ctx.sounds.move[4] },
-        .{ .handle = ctx.sounds.move[5] },
-        .{ .handle = ctx.sounds.move[6] },
-        .{ .handle = ctx.sounds.move[7] },
+    const volume1_node = try audioEngine.createMixerNode(&[_]audio.MixerInput{
+        .{ .handle = ctx.sounds.move, .gain = 1.0 },
+        .{ .handle = filter1_node, .gain = 0.3 },
     });
-    const delay1_output_node = try audioEngine.createDelayOutputNode(@floatToInt(u32, delay1_sec * sample_rate));
-    const delay2_output_node = try audioEngine.createDelayOutputNode(@floatToInt(u32, delay2_sec * sample_rate));
-    const filter1_node = audioEngine.createBiquadNode(delay1_output_node, audio.Biquad.bandpass(delay1_freq / sample_rate, 3));
-    const filter2_node = audioEngine.createBiquadNode(delay2_output_node, audio.Biquad.bandpass(delay2_freq / sample_rate, 3));
-
-    const volume1_node = try audioEngine.createMixerNode(&[_]audio.NodeInput{
-        .{ .handle = mixer_node, .volume = 1.0 },
-        .{ .handle = filter1_node, .volume = 0.3 },
-    });
-    const volume2_node = try audioEngine.createMixerNode(&[_]audio.NodeInput{
-        .{ .handle = mixer_node, .volume = 1.0 },
-        .{ .handle = filter1_node, .volume = 0.3 },
-        .{ .handle = filter2_node, .volume = 0.3 },
+    const volume2_node = try audioEngine.createMixerNode(&[_]audio.MixerInput{
+        .{ .handle = ctx.sounds.move, .gain = 1.0 },
+        .{ .handle = filter1_node, .gain = 0.3 },
+        .{ .handle = filter2_node, .gain = 0.3 },
     });
     const delay1_input_node = try audioEngine.createDelayInputNode(volume1_node, delay1_output_node);
     const delay2_input_node = try audioEngine.createDelayInputNode(volume2_node, delay2_output_node);
 
-    audioEngine.connectToOutput(mixer_node);
+    audioEngine.connectToOutput(ctx.sounds.move);
     audioEngine.connectToOutput(filter1_node);
     audioEngine.connectToOutput(filter2_node);
 

@@ -23,7 +23,7 @@ pub const Context = struct {
     },
     sounds: struct {
         rotate: seizer.audio.NodeHandle,
-        move: [8]seizer.audio.NodeHandle,
+        move: seizer.audio.NodeHandle,
     },
 
     pub fn add_score(self: *@This(), name: []const u8, score: usize) !void {
