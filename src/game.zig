@@ -80,7 +80,7 @@ var last_time: f64 = undefined;
 var bag: [14]PieceType = undefined;
 var grab: usize = undefined;
 var cleared_rows: usize = undefined;
-var score: usize = undefined;
+var score: u64 = undefined;
 var level: usize = undefined;
 var level_at: usize = undefined;
 var clock: usize = 0;
@@ -456,18 +456,18 @@ fn go_deinit(ctx: *Context) void {
 }
 
 fn go_action_restart(ctx: *Context, _: *MenuItem) void {
-    ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
+    ctx.add_score(score) catch |e| @panic("Couldn't add score to high score list");
     ctx.set_screen(GameScreen) catch |e| @panic("Couldn't set screen");
 }
 
 fn go_action_setup(ctx: *Context, _: *MenuItem) void {
-    ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
+    ctx.add_score(score) catch |e| @panic("Couldn't add score to high score list");
     ctx.set_screen(MainMenuScreen) catch |e| @panic("Couldn't set screen");
     ctx.push_screen(SetupScreen) catch |e| @panic("Couldn't push screen");
 }
 
 fn go_action_main_menu(ctx: *Context, _: *MenuItem) void {
-    ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
+    ctx.add_score(score) catch |e| @panic("Couldn't add score to high score list");
     ctx.set_screen(MainMenuScreen) catch |e| @panic("Couldn't set screen");
 }
 

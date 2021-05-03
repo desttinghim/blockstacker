@@ -1,5 +1,6 @@
 import getPlatformEnv from "./seizer.js";
 import getAudioEngineEnv from "./audio_engine.js";
+import getCrossDBEnv from "./crossdb.js";
 
 const canvas_element = document.getElementById("game-canvas");
 var globalInstance;
@@ -7,6 +8,7 @@ var globalInstance;
 let imports = {
     env: getPlatformEnv(canvas_element, () => globalInstance),
     audio_engine: getAudioEngineEnv(() => globalInstance),
+    crossdb: getCrossDBEnv(() => globalInstance),
 };
 
 fetch("blockstacker.wasm")
