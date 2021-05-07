@@ -27,6 +27,7 @@ const Menu = @import("menu.zig").Menu;
 const MenuItem = @import("menu.zig").MenuItem;
 const MainMenuScreen = @import("main_menu.zig").MainMenuScreen;
 const SetupScreen = @import("main_menu.zig").SetupScreen;
+const ScoreEntry = @import("score.zig").ScoreEntry;
 
 pub const GameScreen = .{
     .init = init,
@@ -67,7 +68,7 @@ fn shuffled_bag(ctx: *Context) [7]PieceType {
 }
 
 pub const Setup = struct {
-    level: usize = 0,
+    level: u8 = 0,
 };
 
 var grid: Grid = undefined;
@@ -79,11 +80,9 @@ var inputs: Inputs = undefined;
 var last_time: f64 = undefined;
 var bag: [14]PieceType = undefined;
 var grab: usize = undefined;
-var cleared_rows: usize = undefined;
-var score: u64 = undefined;
-var level: usize = undefined;
 var level_at: usize = undefined;
 var clock: usize = 0;
+var score: ScoreEntry = undefined;
 
 const REPEAT_TIME = 0.1;
 var move_left_timer: f64 = undefined;
@@ -93,8 +92,9 @@ var score_text: []u8 = undefined;
 var level_text: []u8 = undefined;
 var lines_text: []u8 = undefined;
 
-pub fn set_level(level_start: usize) void {
-    level = level_start;
+pub fn set_level(level_start: u8) void {
+    score.startingLevel = level_start;
+    score.level = level_start;
     level_at = level_start * 10 + 10;
 }
 
@@ -123,9 +123,19 @@ pub fn init(ctx: *Context) void {
     bag[0..7].* = shuffled_bag(ctx);
     bag[7..14].* = shuffled_bag(ctx);
     grab = 0;
-    cleared_rows = 0;
-    score = 0;
     clock = 0;
+    score = .{
+        .timestamp = undefined,
+        .score = 0,
+        .startingLevel = undefined,
+        .playTime = 0.0,
+        .rowsCleared = 0,
+        .level = undefined,
+        .singles = 0,
+        .doubles = 0,
+        .triples = 0,
+        .tetrises = 0,
+    };
     set_level(ctx.setup.level);
 
     score_text = std.fmt.allocPrint(ctx.allocator, "{}", .{0}) catch |e| {
@@ -211,6 +221,7 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
 }
 
 pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
+    score.playTime += delta;
     {
         var new_piece = piece;
         var new_pos = piece_pos;
@@ -244,12 +255,12 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
 
     var piece_integrated = false;
     if (inputs.hardDrop == .JustPressed) {
-        score += @intCast(usize, piece_drop_pos.y - piece_pos.y) * 2;
+        score.score += @intCast(usize, piece_drop_pos.y - piece_pos.y) * 2;
         piece.integrate_with(piece_drop_pos, &grid);
         piece_integrated = true;
         last_time = current_time;
     } else if ((inputs.down == .Pressed and last_time > get_soft_drop_delta()) or
-        inputs.down == .JustPressed or current_time - last_time > get_drop_delta(level))
+        inputs.down == .JustPressed or current_time - last_time > get_drop_delta(score.level))
     {
         ctx.audioEngine.play(ctx.sounds.move, ctx.clips.move[clock]);
         clock = (clock + 1) % 8;
@@ -263,7 +274,7 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
             piece_pos = new_pos;
         }
         if (inputs.down == .Pressed or inputs.down == .JustPressed) {
-            score += 1;
+            score.score += 1;
         }
         last_time = current_time;
     }
@@ -279,23 +290,33 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
         if (piece.collides_with(piece_pos, &grid)) {
             ctx.push_screen(GameOverScreen) catch |e| @panic("Could not push screen");
         }
-        cleared_rows += lines;
-        score += get_score(lines, level);
+
+        score.rowsCleared += lines;
+        switch (lines) {
+            0 => {},
+            1 => score.singles += 1,
+            2 => score.doubles += 1,
+            3 => score.triples += 1,
+            4 => score.tetrises += 1,
+            else => unreachable,
+        }
+
+        score.score += get_score(lines, score.level);
 
         ctx.allocator.free(level_text);
         ctx.allocator.free(lines_text);
 
-        level_text = std.fmt.allocPrint(ctx.allocator, "{}", .{level}) catch |e| {
+        level_text = std.fmt.allocPrint(ctx.allocator, "{}", .{score.level}) catch |e| {
             fail_to_null(ctx);
             return;
         };
-        lines_text = std.fmt.allocPrint(ctx.allocator, "{}", .{cleared_rows}) catch |e| {
+        lines_text = std.fmt.allocPrint(ctx.allocator, "{}", .{score.rowsCleared}) catch |e| {
             fail_to_null(ctx);
             return;
         };
 
-        if (cleared_rows > level_at and level < 9) {
-            level += 1;
+        if (score.rowsCleared > level_at and score.level < 9) {
+            score.level += 1;
             level_at += 10;
         }
 
@@ -303,9 +324,9 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
         inputs.down = .Released;
     }
 
-    if (score != prev_score) {
+    if (score.score != prev_score.score) {
         ctx.allocator.free(score_text);
-        score_text = std.fmt.allocPrint(ctx.allocator, "{}", .{score}) catch |e| {
+        score_text = std.fmt.allocPrint(ctx.allocator, "{}", .{score.score}) catch |e| {
             fail_to_null(ctx);
             return;
         };
@@ -444,6 +465,7 @@ fn pixelToTex(tex: *Texture, pixel: Veci) Vec2f {
 var go_menu: Menu = undefined;
 
 fn go_init(ctx: *Context) void {
+    score.timestamp = @divTrunc(seizer.now(), 1000);
     go_menu = Menu.init(ctx.allocator, &.{
         .{ .label = "Restart", .onaction = go_action_restart },
         .{ .label = "Setup", .onaction = go_action_setup },

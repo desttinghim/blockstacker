@@ -7,6 +7,7 @@ const ScoreEntry = @import("score.zig").ScoreEntry;
 const Setup = @import("game.zig").Setup;
 const audio = seizer.audio;
 const crossdb = @import("crossdb");
+const encode = @import("proto-structs").encode;
 
 pub const Context = struct {
     flat: FlatRenderer,
@@ -28,11 +29,11 @@ pub const Context = struct {
     },
     db: crossdb.Database,
 
-    pub fn add_score(self: *@This(), score: u64) !void {
-        try seizer.execute(self.allocator, add_score_async, .{ self, @divTrunc(seizer.now(), 1000), score });
+    pub fn add_score(self: *@This(), score: ScoreEntry) !void {
+        try seizer.execute(self.allocator, add_score_async, .{ self, score });
     }
 
-    pub fn add_score_async(self: *@This(), timestamp: i64, score: u64) void {
+    pub fn add_score_async(self: *@This(), score: ScoreEntry) void {
         var txn = self.db.begin(&.{"scores"}, .{}) catch @panic("Failed to add score");
         errdefer txn.deinit();
 
@@ -41,12 +42,13 @@ pub const Context = struct {
             defer scores.release();
 
             var key: [8]u8 = undefined;
-            var val: [8]u8 = undefined;
 
-            std.mem.writeIntBig(i64, &key, timestamp);
-            std.mem.writeIntBig(u64, &val, score);
+            std.mem.writeIntBig(i64, &key, score.timestamp);
 
-            scores.put(&key, &val) catch @panic("Failed to add score");
+            const val = encode(self.allocator, score) catch unreachable;
+            defer self.allocator.free(val);
+
+            scores.put(&key, val) catch @panic("Failed to add score");
         }
 
         txn.commit() catch @panic("Failed to add score");

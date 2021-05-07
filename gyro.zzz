@@ -26,6 +26,13 @@ deps:
         user: leroycep
         repo: lmdb-builder
         ref: LMDB_0.8.27_builder
+  proto-structs:
+    root: proto_structs.zig
+    src:
+      github:
+        user: leroycep
+        repo: zig-proto-structs
+        ref: master
 build_deps:
   lmdb-builder:
     root: build.zig

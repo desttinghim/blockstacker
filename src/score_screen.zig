@@ -9,6 +9,7 @@ const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
 const GameScreen = @import("game.zig").GameScreen;
 const ScoreEntry = @import("./score.zig").ScoreEntry;
+const Decoder = @import("proto-structs").Decoder;
 
 pub const ScoreScreen: Screen = .{
     .init = init,
@@ -59,8 +60,28 @@ fn render(ctx: *Context, alpha: f64) void {
         var y: f32 = (screen_size_f.y - ctx.font.lineHeight * @intToFloat(f32, scores_list.items.len)) / 2;
         for (scores_list.items) |entry| {
             var buf: [50]u8 = undefined;
-            const text = std.fmt.bufPrint(&buf, "{}", .{entry.score}) catch continue;
-            ctx.font.drawText(&ctx.flat, text, vec2f(screen_size_f.x / 2, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
+            {
+                const text = std.fmt.bufPrint(&buf, "{}", .{entry.timestamp}) catch continue;
+                ctx.font.drawText(&ctx.flat, text, vec2f(screen_size_f.x * 1 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
+            }
+            {
+                const minutes = std.math.floor(entry.playTime / std.time.s_per_min);
+                const seconds = std.math.floor(entry.playTime - minutes * std.time.s_per_min);
+                const text = std.fmt.bufPrint(&buf, "{d}:{d:0>2}", .{ minutes, seconds }) catch continue;
+                ctx.font.drawText(&ctx.flat, text, vec2f(screen_size_f.x * 2 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
+            }
+            {
+                const text = std.fmt.bufPrint(&buf, "{}", .{entry.score}) catch continue;
+                ctx.font.drawText(&ctx.flat, text, vec2f(screen_size_f.x * 3 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
+            }
+            {
+                const text = std.fmt.bufPrint(&buf, "{}", .{entry.startingLevel}) catch continue;
+                ctx.font.drawText(&ctx.flat, text, vec2f(screen_size_f.x * 4 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
+            }
+            {
+                const text = std.fmt.bufPrint(&buf, "{}", .{entry.rowsCleared}) catch continue;
+                ctx.font.drawText(&ctx.flat, text, vec2f(screen_size_f.x * 5 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
+            }
             y += ctx.font.lineHeight;
         }
     }
@@ -78,9 +99,14 @@ fn load_scores(ctx: *Context, scores: *std.ArrayList(ScoreEntry), done: *bool) v
     var cursor = store.cursor(.{}) catch unreachable;
     defer cursor.deinit();
     while (cursor.next() catch unreachable) |entry| {
+        var arena = std.heap.ArenaAllocator.init(ctx.allocator);
+        defer arena.deinit();
+
         const timestamp = std.mem.readIntBig(i64, entry.key[0..8]);
-        const score = std.mem.readIntBig(u64, entry.val[0..8]);
-        scores.append(.{ .timestamp = timestamp, .score = score }) catch unreachable;
+        const score_decoder = Decoder(ScoreEntry).fromBytes(entry.val) catch continue;
+        const score = score_decoder.decode(&arena.allocator) catch continue;
+
+        scores.append(score) catch unreachable;
     }
 
     done.* = true;

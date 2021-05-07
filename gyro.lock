@@ -1,5 +1,6 @@
 github leroycep zigimg wasm zigimg.zig 1f36e403e7588ddde28fec801ecdba5dd13a7e94
 github leroycep crossdb master src/main.zig 638d678e23d5c6b3a4ae07931a76634554d3cbca
 github leroycep lmdb-builder LMDB_0.8.27_builder build.zig d7e32ff0fb02950de1e94caf24b26e7ab41129ab
+github leroycep zig-proto-structs master proto_structs.zig ba9f092aa040a3277ba53cc80b8b8b65acbba120
 github leroycep zigmath master math.zig 730efb3134b68b1d3b82395d980eebcb9c58eabc
 github lithdew lmdb-zig master lmdb.zig fa6f728df42becd0288f39490a33b1bad1fcbb77

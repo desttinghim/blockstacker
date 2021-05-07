@@ -72,8 +72,8 @@ pub const Grid = struct {
         self.set(pos2, a);
     }
 
-    pub fn clear_rows(self: *@This()) !usize {
-        var cleared: usize = 0;
+    pub fn clear_rows(self: *@This()) !u32 {
+        var cleared: u32 = 0;
         var row: usize = self.size.y - 1;
         while (row > 0) : (row -= 1) {
             var full_row = true;
