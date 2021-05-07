@@ -10,6 +10,7 @@ const GameScreen = @import("game.zig").GameScreen;
 const ScoreEntry = @import("score.zig").ScoreEntry;
 const audio = seizer.audio;
 const crossdb = @import("crossdb");
+const chrono = @import("chrono");
 
 pub fn main() void {
     seizer.run(.{
@@ -55,6 +56,9 @@ pub fn onInit() !void {
         .onupgrade = upgradeDb,
     });
 
+    // TODO: Make chrono work cross platform
+    //var load_timezone = if (std.builtin.os.tag != .freestanding) async chrono.timezone.TimeZone.loadTZif(&gpa.allocator, "/etc/localtime") else undefined;
+
     ctx = .{
         .tileset_tex = try await load_tileset,
         .flat = try FlatRenderer.init(ctx.allocator, seizer.getScreenSize().intToFloat(f32)),
@@ -80,6 +84,8 @@ pub fn onInit() !void {
         },
         .sounds = undefined,
         .db = try await open_db,
+        // TODO: Make chrono work cross platform
+        .timezone = if (std.builtin.os.tag != .freestanding) try chrono.timezone.TimeZone.loadTZif(&gpa.allocator, "/etc/localtime") else undefined,
     };
 
     ctx.sounds.rotate = audioEngine.createSoundNode();
@@ -126,6 +132,7 @@ pub fn onDeinit() void {
 
     audioEngine.deinit();
     ctx.db.deinit();
+    ctx.timezone.deinit();
 
     _ = gpa.deinit();
 }

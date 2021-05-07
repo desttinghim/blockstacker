@@ -8,6 +8,7 @@ const Setup = @import("game.zig").Setup;
 const audio = seizer.audio;
 const crossdb = @import("crossdb");
 const encode = @import("proto-structs").encode;
+const chrono = @import("chrono");
 
 pub const Context = struct {
     flat: FlatRenderer,
@@ -28,6 +29,7 @@ pub const Context = struct {
         move: seizer.audio.NodeHandle,
     },
     db: crossdb.Database,
+    timezone: chrono.timezone.TimeZone,
 
     pub fn add_score(self: *@This(), score: ScoreEntry) !void {
         try seizer.execute(self.allocator, add_score_async, .{ self, score });

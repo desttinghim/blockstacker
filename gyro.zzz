@@ -33,6 +33,14 @@ deps:
         user: leroycep
         repo: zig-proto-structs
         ref: master
+  chrono:
+    root: src/lib.zig
+    src:
+      github:
+        user: leroycep
+        repo: chrono-zig
+        ref: master
+
 build_deps:
   lmdb-builder:
     root: build.zig

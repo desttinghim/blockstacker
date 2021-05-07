@@ -38,6 +38,7 @@ pub fn build(b: *std.build.Builder) void {
         lmdb_builder.addTo(b, deps.base_dirs.@"lmdb-builder", exe);
     }
     exe.addPackage(deps.pkgs.@"proto-structs");
+    exe.addPackage(deps.pkgs.chrono);
 
     const build_native_step = b.step("native", "Build for native");
     build_native_step.dependOn(&exe.step);
@@ -73,6 +74,7 @@ pub fn build(b: *std.build.Builder) void {
         web.addPackage(deps.pkgs.zigimg);
         web.addPackage(deps.pkgs.crossdb);
         web.addPackage(deps.pkgs.@"proto-structs");
+        web.addPackage(deps.pkgs.chrono);
 
         const copy_seizerjs = b.addInstallBinFile(deps.base_dirs.seizer ++ "/src/web/seizer.js", "seizer.js");
         const copy_audio_enginejs = b.addInstallBinFile(deps.base_dirs.seizer ++ "/src/web/audio_engine.js", "audio_engine.js");
