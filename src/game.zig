@@ -393,8 +393,8 @@ fn grab_next_piece(ctx: *Context) void {
     piece_pos = piece.set_type(next);
     grab += 1;
     switch (grab) {
-        6 => bag[0..7].* = shuffled_bag(ctx),
-        13 => {
+        7 => bag[0..7].* = shuffled_bag(ctx),
+        14 => {
             grab = 0;
             bag[7..14].* = shuffled_bag(ctx);
         },
