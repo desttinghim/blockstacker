@@ -77,7 +77,7 @@ var piece: Piece = undefined;
 var piece_pos: Veci = undefined;
 var piece_drop_pos: Veci = undefined;
 var next_piece: Piece = undefined;
-var held_piece_type: ?PieceType = null;
+var held_piece: ?Piece = null;
 var can_hold = true;
 var inputs: Inputs = undefined;
 var last_time: f64 = undefined;
@@ -114,7 +114,7 @@ pub fn init(ctx: *Context) void {
     piece = Piece.init();
     piece_pos = veci(0, 0);
     next_piece = Piece.init();
-    held_piece_type = null;
+    held_piece = null;
     can_hold = true;
     inputs = .{
         .hardDrop = .Released,
@@ -266,12 +266,13 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
     if (inputs.hold == .JustPressed and can_hold) {
         can_hold = false;
         const new_held_piece_type = piece.piece_type;
-        if (held_piece_type) |held| {
-            piece_pos = piece.set_type(held);
+        if (held_piece) |held| {
+            piece_pos = piece.set_type(held.piece_type);
         } else {
             grab_next_piece(ctx);
+            held_piece = Piece.init();
         }
-        held_piece_type = new_held_piece_type;
+        _ = held_piece.?.set_type(new_held_piece_type);
     }
 
     const prev_score = score;
@@ -391,25 +392,39 @@ pub fn render(ctx: *Context, alpha: f64) void {
 
     ctx.flat.setSize(screen_size_f);
 
+    // Draw grid
     draw_grid_offset_bg(ctx, grid_offset, grid.size, grid.items);
     draw_grid_offset(ctx, grid_offset, grid.size, grid.items, 1);
+
+    // Draw current piece
     draw_grid_offset(ctx, grid_offset.addv(piece_pos.scale(16)), piece.size, &piece.items, 1);
+
+    // Draw drop indicator
     draw_grid_offset(ctx, grid_offset.addv(piece_drop_pos.scale(16)), piece.size, &piece.items, 0.3);
+
+    // Draw placed blocks
     var y: isize = 0;
     while (y < grid.size.y) : (y += 1) {
         draw_tile(ctx, 0, grid_offset.add(-16, y * 16), 1);
         draw_tile(ctx, 0, grid_offset.add(@intCast(isize, grid.size.x) * 16, y * 16), 1);
     }
+
+    // Draw held piece
+    if (held_piece) |*held| {
+        draw_grid_offset(ctx, veci(2 * 16, 0), held.size, &held.items, 1);
+    }
+
+    // Draw upcoming piece
     draw_grid_offset(ctx, veci(screen_size.x - 8 * 16, 0), next_piece.size, &next_piece.items, 1);
 
-    ctx.font.drawText(&ctx.flat, "SCORE:", vec(0, 0).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
-    ctx.font.drawText(&ctx.flat, score_text, vec(0, 32).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+    ctx.font.drawText(&ctx.flat, "SCORE:", vec(0, 128).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+    ctx.font.drawText(&ctx.flat, score_text, vec(0, 160).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
 
-    ctx.font.drawText(&ctx.flat, "LEVEL:", vec(0, 64).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
-    ctx.font.drawText(&ctx.flat, level_text, vec(0, 96).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+    ctx.font.drawText(&ctx.flat, "LEVEL:", vec(0, 192).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+    ctx.font.drawText(&ctx.flat, level_text, vec(0, 224).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
 
-    ctx.font.drawText(&ctx.flat, "LINES:", vec(0, 128).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
-    ctx.font.drawText(&ctx.flat, lines_text, vec(0, 160).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+    ctx.font.drawText(&ctx.flat, "LINES:", vec(0, 256).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+    ctx.font.drawText(&ctx.flat, lines_text, vec(0, 288).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
 
     ctx.flat.flush();
 }
