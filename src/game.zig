@@ -50,6 +50,7 @@ const Inputs = struct {
     right: InputState,
     rot_cw: InputState,
     rot_ws: InputState,
+    hold: InputState,
 };
 
 fn get_bag() [7]PieceType {
@@ -76,6 +77,8 @@ var piece: Piece = undefined;
 var piece_pos: Veci = undefined;
 var piece_drop_pos: Veci = undefined;
 var next_piece: Piece = undefined;
+var held_piece_type: ?PieceType = null;
+var can_hold = true;
 var inputs: Inputs = undefined;
 var last_time: f64 = undefined;
 var bag: [14]PieceType = undefined;
@@ -111,6 +114,8 @@ pub fn init(ctx: *Context) void {
     piece = Piece.init();
     piece_pos = veci(0, 0);
     next_piece = Piece.init();
+    held_piece_type = null;
+    can_hold = true;
     inputs = .{
         .hardDrop = .Released,
         .down = .Released,
@@ -118,6 +123,7 @@ pub fn init(ctx: *Context) void {
         .right = .Released,
         .rot_ws = .Released,
         .rot_cw = .Released,
+        .hold = .Released,
     };
     last_time = 0;
     bag[0..7].* = shuffled_bag(ctx);
@@ -178,6 +184,9 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
             .W, .UP => if (inputs.right != .Pressed) {
                 inputs.hardDrop = .JustPressed;
             },
+            .TAB => if (inputs.hold != .Pressed) {
+                inputs.hold = .JustPressed;
+            },
 
             .ESCAPE => ctx.push_screen(PauseScreen) catch @panic("Could not push screen"),
             else => {},
@@ -189,6 +198,7 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
             .D, .RIGHT => inputs.right = .Released,
             .S, .DOWN => inputs.down = .Released,
             .W, .UP => inputs.hardDrop = .Released,
+            .TAB => inputs.hold = .Released,
 
             else => {},
         },
@@ -204,6 +214,7 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
             .START => ctx.push_screen(PauseScreen) catch @panic("Could not push screen"),
             .A => inputs.rot_ws = .JustPressed,
             .B => inputs.rot_cw = .JustPressed,
+            .LEFTSHOULDER => inputs.hold = .JustPressed,
             else => {},
         },
         .ControllerButtonUp => |cbutton| switch (cbutton.button) {
@@ -213,6 +224,7 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
             .DPAD_RIGHT => inputs.right = .Released,
             .A => inputs.rot_ws = .Released,
             .B => inputs.rot_cw = .Released,
+            .LEFTSHOULDER => inputs.hold = .Released,
             else => {},
         },
         .Quit => seizer.quit(),
@@ -251,10 +263,21 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
         }
     }
 
+    if (inputs.hold == .JustPressed and can_hold) {
+        can_hold = false;
+        const new_held_piece_type = piece.piece_type;
+        if (held_piece_type) |held| {
+            piece_pos = piece.set_type(held);
+        } else {
+            grab_next_piece(ctx);
+        }
+        held_piece_type = new_held_piece_type;
+    }
+
     const prev_score = score;
 
     var piece_integrated = false;
-    if (inputs.hardDrop == .JustPressed) {
+    if (inputs.hardDrop == .JustPressed and !(inputs.hold == .Pressed or inputs.hold == .JustPressed)) {
         score.score += @intCast(usize, piece_drop_pos.y - piece_pos.y) * 2;
         piece.integrate_with(piece_drop_pos, &grid);
         piece_integrated = true;
@@ -281,6 +304,9 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
 
     if (piece_integrated) {
         grab_next_piece(ctx);
+
+        can_hold = true;
+
         var lines = grid.clear_rows() catch |e| {
             fail_to_null(ctx);
             return;
@@ -348,6 +374,7 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
     }
     if (inputs.rot_ws == .JustPressed) inputs.rot_ws = .Pressed;
     if (inputs.rot_cw == .JustPressed) inputs.rot_cw = .Pressed;
+    if (inputs.hold == .JustPressed) inputs.hold = .Pressed;
 }
 
 pub fn render(ctx: *Context, alpha: f64) void {
