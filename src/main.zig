@@ -84,8 +84,7 @@ pub fn onInit() !void {
         },
         .sounds = undefined,
         .db = try await open_db,
-        // TODO: Make chrono work cross platform
-        .timezone = if (std.builtin.os.tag != .freestanding) try chrono.timezone.TimeZone.loadTZif(&gpa.allocator, "/etc/localtime") else undefined,
+        .timezone = try chrono.timezone.getLocalTimeZone(&gpa.allocator),
     };
 
     ctx.sounds.rotate = audioEngine.createSoundNode();
@@ -132,7 +131,7 @@ pub fn onDeinit() void {
 
     audioEngine.deinit();
     ctx.db.deinit();
-    ctx.timezone.deinit();
+    chrono.timezone.deinitLocalTimeZone();
 
     _ = gpa.deinit();
 }

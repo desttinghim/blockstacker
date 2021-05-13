@@ -29,7 +29,7 @@ pub const Context = struct {
         move: seizer.audio.NodeHandle,
     },
     db: crossdb.Database,
-    timezone: chrono.timezone.TimeZone,
+    timezone: *const chrono.timezone.TimeZone,
 
     pub fn add_score(self: *@This(), score: ScoreEntry) !void {
         try seizer.execute(self.allocator, add_score_async, .{ self, score });

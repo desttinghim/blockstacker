@@ -4,5 +4,4 @@ github leroycep lmdb-builder LMDB_0.8.27_builder build.zig d7e32ff0fb02950de1e94
 github leroycep zig-proto-structs master proto_structs.zig ba9f092aa040a3277ba53cc80b8b8b65acbba120
 github leroycep zigmath master math.zig 730efb3134b68b1d3b82395d980eebcb9c58eabc
 github lithdew lmdb-zig master lmdb.zig fa6f728df42becd0288f39490a33b1bad1fcbb77
-github leroycep chrono-zig master proto_structs.zig 39be068d9f405d15ed9f3b7623228453a9862f35
-github leroycep chrono-zig master src/lib.zig 39be068d9f405d15ed9f3b7623228453a9862f35
+github leroycep chrono-zig master src/lib.zig 0170d10eb7e59b60b28c35433bc232de268a6368

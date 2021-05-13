@@ -61,8 +61,8 @@ fn render(ctx: *Context, alpha: f64) void {
         var y: f32 = (screen_size_f.y - ctx.font.lineHeight * @intToFloat(f32, scores_list.items.len)) / 2;
         for (scores_list.items) |entry| {
             var buf: [50]u8 = undefined;
-            if (std.builtin.os.tag != .freestanding) {
-                const dt = chrono.datetime.DateTime.utc(chrono.datetime.NaiveDateTime.from_timestamp(entry.timestamp, 0).?, &ctx.timezone);
+            {
+                const dt = chrono.datetime.DateTime.utc(chrono.datetime.NaiveDateTime.from_timestamp(entry.timestamp, 0).?, ctx.timezone);
                 const naive_dt = dt.toNaiveDateTime();
                 const dt_fmt = naive_dt.formatted("%Y-%m-%d");
                 const text = std.fmt.bufPrint(&buf, "{}", .{dt_fmt}) catch continue;
