@@ -1,11 +1,11 @@
 deps:
   seizer:
     root: src/seizer.zig
-    src: local: /home/leroycep/projects/util/seizer/
-#      github:
-#        user: leroycep
-#        repo: seizer
-#        ref: audioengine
+    src:
+      github:
+        user: leroycep
+        repo: seizer
+        ref: async-engine
   zigimg:
     root: zigimg.zig
     src:
