@@ -8,6 +8,7 @@ const gl = seizer.gl;
 const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
 const GameScreen = @import("game.zig").GameScreen;
+const ScoreScreen = @import("score_screen.zig").ScoreScreen;
 
 pub const MainMenuScreen: Screen = .{
     .init = init,
@@ -22,6 +23,7 @@ fn init(ctx: *Context) void {
     // TODO: Add settings screen for settings that don't affect gameplay
     menu = Menu.init(ctx.allocator, &.{
         .{ .label = "Start Game", .onaction = action_setup_game },
+        .{ .label = "Scores", .onaction = action_scores },
         .{ .label = "Quit", .onaction = action_quit },
     }) catch @panic("Couldn't set up menu");
 }
@@ -37,6 +39,11 @@ fn action_setup_game(ctx: *Context, _: *MenuItem) void {
 
 fn action_quit(_ctx: *Context, _: *MenuItem) void {
     seizer.quit();
+}
+
+fn action_scores(ctx: *Context, _: *MenuItem) void {
+    // TODO: Go to setup screen instead of directly to game
+    ctx.push_screen(ScoreScreen) catch @panic("Switching screen somehow caused allocation");
 }
 
 fn event(ctx: *Context, evt: seizer.event.Event) void {

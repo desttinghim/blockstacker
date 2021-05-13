@@ -27,6 +27,7 @@ const Menu = @import("menu.zig").Menu;
 const MenuItem = @import("menu.zig").MenuItem;
 const MainMenuScreen = @import("main_menu.zig").MainMenuScreen;
 const SetupScreen = @import("main_menu.zig").SetupScreen;
+const ScoreEntry = @import("score.zig").ScoreEntry;
 
 pub const GameScreen = .{
     .init = init,
@@ -49,6 +50,7 @@ const Inputs = struct {
     right: InputState,
     rot_cw: InputState,
     rot_ws: InputState,
+    hold: InputState,
 };
 
 fn get_bag() [7]PieceType {
@@ -67,7 +69,7 @@ fn shuffled_bag(ctx: *Context) [7]PieceType {
 }
 
 pub const Setup = struct {
-    level: usize = 0,
+    level: u8 = 0,
 };
 
 var grid: Grid = undefined;
@@ -75,15 +77,15 @@ var piece: Piece = undefined;
 var piece_pos: Veci = undefined;
 var piece_drop_pos: Veci = undefined;
 var next_piece: Piece = undefined;
+var held_piece: ?Piece = null;
+var can_hold = true;
 var inputs: Inputs = undefined;
 var last_time: f64 = undefined;
 var bag: [14]PieceType = undefined;
 var grab: usize = undefined;
-var cleared_rows: usize = undefined;
-var score: usize = undefined;
-var level: usize = undefined;
 var level_at: usize = undefined;
 var clock: usize = 0;
+var score: ScoreEntry = undefined;
 
 const REPEAT_TIME = 0.1;
 var move_left_timer: f64 = undefined;
@@ -93,8 +95,9 @@ var score_text: []u8 = undefined;
 var level_text: []u8 = undefined;
 var lines_text: []u8 = undefined;
 
-pub fn set_level(level_start: usize) void {
-    level = level_start;
+pub fn set_level(level_start: u8) void {
+    score.startingLevel = level_start;
+    score.level = level_start;
     level_at = level_start * 10 + 10;
 }
 
@@ -111,6 +114,8 @@ pub fn init(ctx: *Context) void {
     piece = Piece.init();
     piece_pos = veci(0, 0);
     next_piece = Piece.init();
+    held_piece = null;
+    can_hold = true;
     inputs = .{
         .hardDrop = .Released,
         .down = .Released,
@@ -118,14 +123,25 @@ pub fn init(ctx: *Context) void {
         .right = .Released,
         .rot_ws = .Released,
         .rot_cw = .Released,
+        .hold = .Released,
     };
     last_time = 0;
     bag[0..7].* = shuffled_bag(ctx);
     bag[7..14].* = shuffled_bag(ctx);
     grab = 0;
-    cleared_rows = 0;
-    score = 0;
     clock = 0;
+    score = .{
+        .timestamp = undefined,
+        .score = 0,
+        .startingLevel = undefined,
+        .playTime = 0.0,
+        .rowsCleared = 0,
+        .level = undefined,
+        .singles = 0,
+        .doubles = 0,
+        .triples = 0,
+        .tetrises = 0,
+    };
     set_level(ctx.setup.level);
 
     score_text = std.fmt.allocPrint(ctx.allocator, "{}", .{0}) catch |e| {
@@ -168,6 +184,9 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
             .W, .UP => if (inputs.right != .Pressed) {
                 inputs.hardDrop = .JustPressed;
             },
+            .TAB => if (inputs.hold != .Pressed) {
+                inputs.hold = .JustPressed;
+            },
 
             .ESCAPE => ctx.push_screen(PauseScreen) catch @panic("Could not push screen"),
             else => {},
@@ -179,6 +198,7 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
             .D, .RIGHT => inputs.right = .Released,
             .S, .DOWN => inputs.down = .Released,
             .W, .UP => inputs.hardDrop = .Released,
+            .TAB => inputs.hold = .Released,
 
             else => {},
         },
@@ -194,6 +214,7 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
             .START => ctx.push_screen(PauseScreen) catch @panic("Could not push screen"),
             .A => inputs.rot_ws = .JustPressed,
             .B => inputs.rot_cw = .JustPressed,
+            .LEFTSHOULDER => inputs.hold = .JustPressed,
             else => {},
         },
         .ControllerButtonUp => |cbutton| switch (cbutton.button) {
@@ -203,6 +224,7 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
             .DPAD_RIGHT => inputs.right = .Released,
             .A => inputs.rot_ws = .Released,
             .B => inputs.rot_cw = .Released,
+            .LEFTSHOULDER => inputs.hold = .Released,
             else => {},
         },
         .Quit => seizer.quit(),
@@ -211,6 +233,7 @@ pub fn event(ctx: *Context, evt: seizer.event.Event) void {
 }
 
 pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
+    score.playTime += delta;
     {
         var new_piece = piece;
         var new_pos = piece_pos;
@@ -240,16 +263,28 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
         }
     }
 
+    if (inputs.hold == .JustPressed and can_hold) {
+        can_hold = false;
+        const new_held_piece_type = piece.piece_type;
+        if (held_piece) |held| {
+            piece_pos = piece.set_type(held.piece_type);
+        } else {
+            grab_next_piece(ctx);
+            held_piece = Piece.init();
+        }
+        _ = held_piece.?.set_type(new_held_piece_type);
+    }
+
     const prev_score = score;
 
     var piece_integrated = false;
-    if (inputs.hardDrop == .JustPressed) {
-        score += @intCast(usize, piece_drop_pos.y - piece_pos.y) * 2;
+    if (inputs.hardDrop == .JustPressed and !(inputs.hold == .Pressed or inputs.hold == .JustPressed)) {
+        score.score += @intCast(usize, piece_drop_pos.y - piece_pos.y) * 2;
         piece.integrate_with(piece_drop_pos, &grid);
         piece_integrated = true;
         last_time = current_time;
     } else if ((inputs.down == .Pressed and last_time > get_soft_drop_delta()) or
-        inputs.down == .JustPressed or current_time - last_time > get_drop_delta(level))
+        inputs.down == .JustPressed or current_time - last_time > get_drop_delta(score.level))
     {
         ctx.audioEngine.play(ctx.sounds.move, ctx.clips.move[clock]);
         clock = (clock + 1) % 8;
@@ -263,13 +298,16 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
             piece_pos = new_pos;
         }
         if (inputs.down == .Pressed or inputs.down == .JustPressed) {
-            score += 1;
+            score.score += 1;
         }
         last_time = current_time;
     }
 
     if (piece_integrated) {
         grab_next_piece(ctx);
+
+        can_hold = true;
+
         var lines = grid.clear_rows() catch |e| {
             fail_to_null(ctx);
             return;
@@ -279,23 +317,33 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
         if (piece.collides_with(piece_pos, &grid)) {
             ctx.push_screen(GameOverScreen) catch |e| @panic("Could not push screen");
         }
-        cleared_rows += lines;
-        score += get_score(lines, level);
+
+        score.rowsCleared += lines;
+        switch (lines) {
+            0 => {},
+            1 => score.singles += 1,
+            2 => score.doubles += 1,
+            3 => score.triples += 1,
+            4 => score.tetrises += 1,
+            else => unreachable,
+        }
+
+        score.score += get_score(lines, score.level);
 
         ctx.allocator.free(level_text);
         ctx.allocator.free(lines_text);
 
-        level_text = std.fmt.allocPrint(ctx.allocator, "{}", .{level}) catch |e| {
+        level_text = std.fmt.allocPrint(ctx.allocator, "{}", .{score.level}) catch |e| {
             fail_to_null(ctx);
             return;
         };
-        lines_text = std.fmt.allocPrint(ctx.allocator, "{}", .{cleared_rows}) catch |e| {
+        lines_text = std.fmt.allocPrint(ctx.allocator, "{}", .{score.rowsCleared}) catch |e| {
             fail_to_null(ctx);
             return;
         };
 
-        if (cleared_rows > level_at and level < 9) {
-            level += 1;
+        if (score.rowsCleared > level_at and score.level < 9) {
+            score.level += 1;
             level_at += 10;
         }
 
@@ -303,9 +351,9 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
         inputs.down = .Released;
     }
 
-    if (score != prev_score) {
+    if (score.score != prev_score.score) {
         ctx.allocator.free(score_text);
-        score_text = std.fmt.allocPrint(ctx.allocator, "{}", .{score}) catch |e| {
+        score_text = std.fmt.allocPrint(ctx.allocator, "{}", .{score.score}) catch |e| {
             fail_to_null(ctx);
             return;
         };
@@ -327,6 +375,7 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
     }
     if (inputs.rot_ws == .JustPressed) inputs.rot_ws = .Pressed;
     if (inputs.rot_cw == .JustPressed) inputs.rot_cw = .Pressed;
+    if (inputs.hold == .JustPressed) inputs.hold = .Pressed;
 }
 
 pub fn render(ctx: *Context, alpha: f64) void {
@@ -343,25 +392,39 @@ pub fn render(ctx: *Context, alpha: f64) void {
 
     ctx.flat.setSize(screen_size_f);
 
+    // Draw grid
     draw_grid_offset_bg(ctx, grid_offset, grid.size, grid.items);
     draw_grid_offset(ctx, grid_offset, grid.size, grid.items, 1);
+
+    // Draw current piece
     draw_grid_offset(ctx, grid_offset.addv(piece_pos.scale(16)), piece.size, &piece.items, 1);
+
+    // Draw drop indicator
     draw_grid_offset(ctx, grid_offset.addv(piece_drop_pos.scale(16)), piece.size, &piece.items, 0.3);
+
+    // Draw placed blocks
     var y: isize = 0;
     while (y < grid.size.y) : (y += 1) {
         draw_tile(ctx, 0, grid_offset.add(-16, y * 16), 1);
         draw_tile(ctx, 0, grid_offset.add(@intCast(isize, grid.size.x) * 16, y * 16), 1);
     }
+
+    // Draw held piece
+    if (held_piece) |*held| {
+        draw_grid_offset(ctx, veci(2 * 16, 0), held.size, &held.items, 1);
+    }
+
+    // Draw upcoming piece
     draw_grid_offset(ctx, veci(screen_size.x - 8 * 16, 0), next_piece.size, &next_piece.items, 1);
 
-    ctx.font.drawText(&ctx.flat, "SCORE:", vec(0, 0).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
-    ctx.font.drawText(&ctx.flat, score_text, vec(0, 32).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+    ctx.font.drawText(&ctx.flat, "SCORE:", vec(0, 128).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+    ctx.font.drawText(&ctx.flat, score_text, vec(0, 160).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
 
-    ctx.font.drawText(&ctx.flat, "LEVEL:", vec(0, 64).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
-    ctx.font.drawText(&ctx.flat, level_text, vec(0, 96).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+    ctx.font.drawText(&ctx.flat, "LEVEL:", vec(0, 192).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+    ctx.font.drawText(&ctx.flat, level_text, vec(0, 224).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
 
-    ctx.font.drawText(&ctx.flat, "LINES:", vec(0, 128).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
-    ctx.font.drawText(&ctx.flat, lines_text, vec(0, 160).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+    ctx.font.drawText(&ctx.flat, "LINES:", vec(0, 256).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
+    ctx.font.drawText(&ctx.flat, lines_text, vec(0, 288).intToFloat(f32), .{ .scale = 2, .textBaseline = .Top });
 
     ctx.flat.flush();
 }
@@ -372,8 +435,8 @@ fn grab_next_piece(ctx: *Context) void {
     piece_pos = piece.set_type(next);
     grab += 1;
     switch (grab) {
-        6 => bag[0..7].* = shuffled_bag(ctx),
-        13 => {
+        7 => bag[0..7].* = shuffled_bag(ctx),
+        14 => {
             grab = 0;
             bag[7..14].* = shuffled_bag(ctx);
         },
@@ -444,6 +507,7 @@ fn pixelToTex(tex: *Texture, pixel: Veci) Vec2f {
 var go_menu: Menu = undefined;
 
 fn go_init(ctx: *Context) void {
+    score.timestamp = @divTrunc(seizer.now(), 1000);
     go_menu = Menu.init(ctx.allocator, &.{
         .{ .label = "Restart", .onaction = go_action_restart },
         .{ .label = "Setup", .onaction = go_action_setup },
@@ -456,18 +520,18 @@ fn go_deinit(ctx: *Context) void {
 }
 
 fn go_action_restart(ctx: *Context, _: *MenuItem) void {
-    ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
+    ctx.add_score(score) catch |e| @panic("Couldn't add score to high score list");
     ctx.set_screen(GameScreen) catch |e| @panic("Couldn't set screen");
 }
 
 fn go_action_setup(ctx: *Context, _: *MenuItem) void {
-    ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
+    ctx.add_score(score) catch |e| @panic("Couldn't add score to high score list");
     ctx.set_screen(MainMenuScreen) catch |e| @panic("Couldn't set screen");
     ctx.push_screen(SetupScreen) catch |e| @panic("Couldn't push screen");
 }
 
 fn go_action_main_menu(ctx: *Context, _: *MenuItem) void {
-    ctx.add_score("AAAAAAAAAA", score) catch |e| @panic("Couldn't add score to high score list");
+    ctx.add_score(score) catch |e| @panic("Couldn't add score to high score list");
     ctx.set_screen(MainMenuScreen) catch |e| @panic("Couldn't set screen");
 }
 

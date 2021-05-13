@@ -6,6 +6,9 @@ const Texture = @import("texture.zig").Texture;
 const ScoreEntry = @import("score.zig").ScoreEntry;
 const Setup = @import("game.zig").Setup;
 const audio = seizer.audio;
+const crossdb = @import("crossdb");
+const encode = @import("proto-structs").encode;
+const chrono = @import("chrono");
 
 pub const Context = struct {
     flat: FlatRenderer,
@@ -25,10 +28,32 @@ pub const Context = struct {
         rotate: seizer.audio.NodeHandle,
         move: seizer.audio.NodeHandle,
     },
+    db: crossdb.Database,
+    timezone: *const chrono.timezone.TimeZone,
 
-    pub fn add_score(self: *@This(), name: []const u8, score: usize) !void {
-        try self.scores.append(.{ .name = name, .score = score });
-        std.sort.sort(ScoreEntry, self.scores.items, {}, ScoreEntry.lessThan);
+    pub fn add_score(self: *@This(), score: ScoreEntry) !void {
+        try seizer.execute(self.allocator, add_score_async, .{ self, score });
+    }
+
+    pub fn add_score_async(self: *@This(), score: ScoreEntry) void {
+        var txn = self.db.begin(&.{"scores"}, .{}) catch @panic("Failed to add score");
+        errdefer txn.deinit();
+
+        {
+            var scores = txn.store("scores") catch @panic("Failed to add score");
+            defer scores.release();
+
+            var key: [8]u8 = undefined;
+
+            std.mem.writeIntBig(i64, &key, score.timestamp);
+
+            const val = encode(self.allocator, score) catch unreachable;
+            defer self.allocator.free(val);
+
+            scores.put(&key, val) catch @panic("Failed to add score");
+        }
+
+        txn.commit() catch @panic("Failed to add score");
     }
 
     pub fn current_screen(self: *@This()) Screen {

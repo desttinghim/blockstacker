@@ -9,6 +9,8 @@ const MainMenuScreen = @import("main_menu.zig").MainMenuScreen;
 const GameScreen = @import("game.zig").GameScreen;
 const ScoreEntry = @import("score.zig").ScoreEntry;
 const audio = seizer.audio;
+const crossdb = @import("crossdb");
+const chrono = @import("chrono");
 
 pub fn main() void {
     seizer.run(.{
@@ -49,6 +51,13 @@ pub fn onInit() !void {
     var load_clock5_sound = async audioEngine.load(allocator, "assets/clock5.wav", 2 * 1024 * 1024);
     var load_clock6_sound = async audioEngine.load(allocator, "assets/clock6.wav", 2 * 1024 * 1024);
     var load_clock7_sound = async audioEngine.load(allocator, "assets/clock7.wav", 2 * 1024 * 1024);
+    var open_db = async crossdb.Database.open(allocator, "blockstacker", "scores", .{
+        .version = 1,
+        .onupgrade = upgradeDb,
+    });
+
+    // TODO: Make chrono work cross platform
+    //var load_timezone = if (std.builtin.os.tag != .freestanding) async chrono.timezone.TimeZone.loadTZif(&gpa.allocator, "/etc/localtime") else undefined;
 
     ctx = .{
         .tileset_tex = try await load_tileset,
@@ -74,6 +83,8 @@ pub fn onInit() !void {
             },
         },
         .sounds = undefined,
+        .db = try await open_db,
+        .timezone = try chrono.timezone.getLocalTimeZone(&gpa.allocator),
     };
 
     ctx.sounds.rotate = audioEngine.createSoundNode();
@@ -119,6 +130,8 @@ pub fn onDeinit() void {
     }
 
     audioEngine.deinit();
+    ctx.db.deinit();
+    chrono.timezone.deinitLocalTimeZone();
 
     _ = gpa.deinit();
 }
@@ -135,6 +148,10 @@ pub fn render(alpha: f64) !void {
 
 pub fn update(current_time: f64, delta: f64) anyerror!void {
     ctx.current_screen().update(&ctx, current_time, delta);
+}
+
+pub fn upgradeDb(db: *crossdb.Database, oldVersion: u32, newVersion: u32) anyerror!void {
+    try db.createStore("scores", .{});
 }
 
 pub const log = seizer.log;

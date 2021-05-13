@@ -1,15 +1,51 @@
 deps:
   seizer:
+    root: src/seizer.zig
     src:
       github:
         user: leroycep
         repo: seizer
-        ref: audioengine
-    root: src/seizer.zig
+        ref: async-engine
   zigimg:
+    root: zigimg.zig
     src:
       github:
         user: leroycep
         repo: zigimg
         ref: wasm
-    root: zigimg.zig
+  crossdb:
+    src:
+      github:
+        user: leroycep
+        repo: crossdb
+        ref: master
+  lmdb-builder:
+    root: build.zig
+    src:
+      github:
+        user: leroycep
+        repo: lmdb-builder
+        ref: LMDB_0.8.27_builder
+  proto-structs:
+    root: proto_structs.zig
+    src:
+      github:
+        user: leroycep
+        repo: zig-proto-structs
+        ref: master
+  chrono:
+    root: src/lib.zig
+    src:
+      github:
+        user: leroycep
+        repo: chrono-zig
+        ref: master
+
+build_deps:
+  lmdb-builder:
+    root: build.zig
+    src:
+      github:
+        user: leroycep
+        repo: lmdb-builder
+        ref: LMDB_0.8.27_builder

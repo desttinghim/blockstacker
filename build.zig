@@ -1,6 +1,7 @@
 const std = @import("std");
 const Builder = std.build.Builder;
 const deps = @import("./deps.zig");
+const lmdb_builder = @import("lmdb-builder");
 
 pub fn build(b: *std.build.Builder) void {
     // Standard target options allows the person running `zig build` to choose
@@ -32,6 +33,15 @@ pub fn build(b: *std.build.Builder) void {
 
     exe.addPackage(deps.pkgs.seizer);
     exe.addPackage(deps.pkgs.zigimg);
+    {
+        exe.addPackage(deps.pkgs.crossdb);
+        lmdb_builder.addTo(b, deps.base_dirs.@"lmdb-builder", exe);
+    }
+    exe.addPackage(deps.pkgs.@"proto-structs");
+    exe.addPackage(deps.pkgs.chrono);
+
+    const build_native_step = b.step("native", "Build for native");
+    build_native_step.dependOn(&exe.step);
 
     // Install assets alongside binary
     const copy_assets = b.addInstallDirectory(.{
@@ -62,9 +72,14 @@ pub fn build(b: *std.build.Builder) void {
 
         web.addPackage(deps.pkgs.seizer);
         web.addPackage(deps.pkgs.zigimg);
+        web.addPackage(deps.pkgs.crossdb);
+        web.addPackage(deps.pkgs.@"proto-structs");
+        web.addPackage(deps.pkgs.chrono);
 
         const copy_seizerjs = b.addInstallBinFile(deps.base_dirs.seizer ++ "/src/web/seizer.js", "seizer.js");
         const copy_audio_enginejs = b.addInstallBinFile(deps.base_dirs.seizer ++ "/src/web/audio_engine.js", "audio_engine.js");
+        const copy_crossdbjs = b.addInstallBinFile(deps.base_dirs.crossdb ++ "/src/crossdb.js", "crossdb.js");
+        const copy_chronojs = b.addInstallBinFile(deps.base_dirs.chrono ++ "/js/chrono.js", "chrono.js");
 
         const copy_www = b.addInstallDirectory(.{
             .source_dir = "www",
@@ -78,6 +93,8 @@ pub fn build(b: *std.build.Builder) void {
         build_web.dependOn(&copy_assets.step);
         build_web.dependOn(&copy_seizerjs.step);
         build_web.dependOn(&copy_audio_enginejs.step);
+        build_web.dependOn(&copy_crossdbjs.step);
+        build_web.dependOn(&copy_chronojs.step);
         build_web.dependOn(&copy_www.step);
     }
 }
