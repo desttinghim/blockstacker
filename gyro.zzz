@@ -5,7 +5,7 @@ deps:
       github:
         user: leroycep
         repo: seizer
-        ref: async-engine
+        ref: master
   zigimg:
     root: zigimg.zig
     src:
