@@ -10,15 +10,12 @@ deps:
     root: zigimg.zig
     src:
       github:
-        user: leroycep
+        user: zigimg
         repo: zigimg
-        ref: wasm
+        ref: master
   crossdb:
     src:
-      github:
-        user: leroycep
-        repo: crossdb
-        ref: master
+      github: user: leroycep; repo: crossdb; ref: master;
   lmdb-builder:
     root: build.zig
     src:

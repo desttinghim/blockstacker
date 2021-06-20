@@ -63,9 +63,9 @@ pub const FlatRenderer = struct {
         gl.enableVertexAttribArray(2); // UV attribute
 
         gl.bindBuffer(gl.ARRAY_BUFFER, vbo);
-        gl.vertexAttribPointer(0, 2, gl.FLOAT, gl.FALSE, @sizeOf(Vertex), @intToPtr(?*const c_void, @byteOffsetOf(Vertex, "x")));
-        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, @sizeOf(Vertex), @intToPtr(?*const c_void, @byteOffsetOf(Vertex, "u")));
-        gl.vertexAttribPointer(2, 1, gl.FLOAT, gl.FALSE, @sizeOf(Vertex), @intToPtr(?*const c_void, @byteOffsetOf(Vertex, "opacity")));
+        gl.vertexAttribPointer(0, 2, gl.FLOAT, gl.FALSE, @sizeOf(Vertex), @intToPtr(?*const c_void, @offsetOf(Vertex, "x")));
+        gl.vertexAttribPointer(1, 2, gl.FLOAT, gl.FALSE, @sizeOf(Vertex), @intToPtr(?*const c_void, @offsetOf(Vertex, "u")));
+        gl.vertexAttribPointer(2, 1, gl.FLOAT, gl.FALSE, @sizeOf(Vertex), @intToPtr(?*const c_void, @offsetOf(Vertex, "opacity")));
         gl.bindBuffer(gl.ARRAY_BUFFER, 0);
 
         const projection = gl.getUniformLocation(program, "mvp");

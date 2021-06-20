@@ -46,7 +46,7 @@ pub fn build(b: *std.build.Builder) void {
     // Install assets alongside binary
     const copy_assets = b.addInstallDirectory(.{
         .source_dir = "assets",
-        .install_dir = .Bin,
+        .install_dir = .bin,
         .install_subdir = "assets",
     });
     exe.step.dependOn(&copy_assets.step);
@@ -63,7 +63,7 @@ pub fn build(b: *std.build.Builder) void {
     {
         const web = b.addStaticLibrary("blockstacker", "src/main.zig");
         web.setBuildMode(mode);
-        web.override_dest_dir = .Bin;
+        web.override_dest_dir = .bin;
         web.setTarget(.{
             .cpu_arch = .wasm32,
             .os_tag = .freestanding,
@@ -76,14 +76,14 @@ pub fn build(b: *std.build.Builder) void {
         web.addPackage(deps.pkgs.@"proto-structs");
         web.addPackage(deps.pkgs.chrono);
 
-        const copy_seizerjs = b.addInstallBinFile(deps.base_dirs.seizer ++ "/src/web/seizer.js", "seizer.js");
-        const copy_audio_enginejs = b.addInstallBinFile(deps.base_dirs.seizer ++ "/src/web/audio_engine.js", "audio_engine.js");
-        const copy_crossdbjs = b.addInstallBinFile(deps.base_dirs.crossdb ++ "/src/crossdb.js", "crossdb.js");
-        const copy_chronojs = b.addInstallBinFile(deps.base_dirs.chrono ++ "/js/chrono.js", "chrono.js");
+        const copy_seizerjs = b.addInstallBinFile(.{ .path = deps.base_dirs.seizer ++ "/src/web/seizer.js" }, "seizer.js");
+        const copy_audio_enginejs = b.addInstallBinFile(.{ .path = deps.base_dirs.seizer ++ "/src/web/audio_engine.js" }, "audio_engine.js");
+        const copy_crossdbjs = b.addInstallBinFile(.{ .path = deps.base_dirs.crossdb ++ "/src/crossdb.js" }, "crossdb.js");
+        const copy_chronojs = b.addInstallBinFile(.{ .path = deps.base_dirs.chrono ++ "/js/chrono.js" }, "chrono.js");
 
         const copy_www = b.addInstallDirectory(.{
             .source_dir = "www",
-            .install_dir = .Bin,
+            .install_dir = .bin,
             .install_subdir = "",
         });
 
