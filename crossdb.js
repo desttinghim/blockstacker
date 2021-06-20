@@ -133,6 +133,10 @@ export default function getCrossDBEnv(getGlobalInstance) {
             };
         },
 
+        databaseDeinit(dbHandle) {
+            destroyDatabaseHandle(dbHandle);
+        },
+
         databaseDelete(namePtr, nameLen) {
             const name = read_utf8_string(namePtr, nameLen);
 
