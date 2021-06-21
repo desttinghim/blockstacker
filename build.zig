@@ -1,7 +1,6 @@
 const std = @import("std");
 const Builder = std.build.Builder;
 const deps = @import("./deps.zig");
-const lmdb_builder = @import("lmdb-builder");
 
 pub fn build(b: *std.build.Builder) void {
     // Standard target options allows the person running `zig build` to choose
@@ -31,14 +30,7 @@ pub fn build(b: *std.build.Builder) void {
         exe.linkSystemLibrary("SDL2");
     }
 
-    exe.addPackage(deps.pkgs.seizer);
-    exe.addPackage(deps.pkgs.zigimg);
-    {
-        exe.addPackage(deps.pkgs.crossdb);
-        lmdb_builder.addTo(b, deps.base_dirs.@"lmdb-builder", exe);
-    }
-    exe.addPackage(deps.pkgs.@"proto-structs");
-    exe.addPackage(deps.pkgs.chrono);
+    deps.addAllTo(exe);
 
     const build_native_step = b.step("native", "Build for native");
     build_native_step.dependOn(&exe.step);
@@ -61,7 +53,7 @@ pub fn build(b: *std.build.Builder) void {
     run_step.dependOn(&run_cmd.step);
 
     {
-        const web = b.addStaticLibrary("blockstacker", "src/main.zig");
+        const web = b.addSharedLibrary("blockstacker", "src/main.zig", .unversioned);
         web.setBuildMode(mode);
         web.override_dest_dir = .bin;
         web.setTarget(.{
@@ -71,15 +63,14 @@ pub fn build(b: *std.build.Builder) void {
         web.install();
 
         web.addPackage(deps.pkgs.seizer);
-        web.addPackage(deps.pkgs.zigimg);
         web.addPackage(deps.pkgs.crossdb);
-        web.addPackage(deps.pkgs.@"proto-structs");
         web.addPackage(deps.pkgs.chrono);
 
-        const copy_seizerjs = b.addInstallBinFile(.{ .path = deps.base_dirs.seizer ++ "/src/web/seizer.js" }, "seizer.js");
-        const copy_audio_enginejs = b.addInstallBinFile(.{ .path = deps.base_dirs.seizer ++ "/src/web/audio_engine.js" }, "audio_engine.js");
-        const copy_crossdbjs = b.addInstallBinFile(.{ .path = deps.base_dirs.crossdb ++ "/src/crossdb.js" }, "crossdb.js");
-        const copy_chronojs = b.addInstallBinFile(.{ .path = deps.base_dirs.chrono ++ "/js/chrono.js" }, "chrono.js");
+        // Generate JS file and copy it to install dir
+        const install_js_exe = b.addExecutable("install_js", "tools/install_js.zig");
+        deps.addAllTo(install_js_exe);
+        const install_js = install_js_exe.run();
+        install_js.addArg(b.getInstallPath(.bin, ""));
 
         const copy_www = b.addInstallDirectory(.{
             .source_dir = "www",
@@ -91,10 +82,7 @@ pub fn build(b: *std.build.Builder) void {
         build_web.dependOn(&web.step);
         build_web.dependOn(&web.install_step.?.step);
         build_web.dependOn(&copy_assets.step);
-        build_web.dependOn(&copy_seizerjs.step);
-        build_web.dependOn(&copy_audio_enginejs.step);
-        build_web.dependOn(&copy_crossdbjs.step);
-        build_web.dependOn(&copy_chronojs.step);
+        build_web.dependOn(&install_js.step);
         build_web.dependOn(&copy_www.step);
     }
 }
