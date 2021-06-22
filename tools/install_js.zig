@@ -1,6 +1,7 @@
 const std = @import("std");
 const seizer = @import("seizer");
 const crossdb = @import("crossdb");
+const chrono = @import("chrono");
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -14,4 +15,5 @@ pub fn main() !void {
 
     try seizer.generateWebFiles(dir, .{});
     try crossdb.installJS(dir);
+    try chrono.installJS(dir);
 }

@@ -7,7 +7,7 @@ const ScoreEntry = @import("score.zig").ScoreEntry;
 const Setup = @import("game.zig").Setup;
 const audio = seizer.audio;
 const crossdb = @import("crossdb");
-const encode = @import("proto-structs").encode;
+const encode = @import("proto_structs").encode;
 const chrono = @import("chrono");
 
 pub const Context = struct {

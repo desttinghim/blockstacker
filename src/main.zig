@@ -12,21 +12,19 @@ const audio = seizer.audio;
 const crossdb = @import("crossdb");
 const chrono = @import("chrono");
 
-pub fn main() void {
-    seizer.run(.{
-        .init = onInit,
-        .deinit = onDeinit,
-        .event = onEvent,
-        .render = render,
-        .update = update,
-        .window = .{
-            .title = "Blockstacker",
-            .width = 480,
-            .height = 320,
-        },
-        .sdlControllerDBPath = "sdl_controllers.txt",
-    });
-}
+pub usingnamespace seizer.run(.{
+    .init = onInit,
+    .deinit = onDeinit,
+    .event = onEvent,
+    .render = render,
+    .update = update,
+    .window = .{
+        .title = "Blockstacker",
+        .width = 480,
+        .height = 320,
+    },
+    .sdlControllerDBPath = "sdl_controllers.txt",
+});
 
 var ctx: Context = undefined;
 var gpa = std.heap.GeneralPurposeAllocator(.{}){};

@@ -9,7 +9,7 @@ const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
 const GameScreen = @import("game.zig").GameScreen;
 const ScoreEntry = @import("./score.zig").ScoreEntry;
-const Decoder = @import("proto-structs").Decoder;
+const Decoder = @import("proto_structs").Decoder;
 const chrono = @import("chrono");
 
 pub const ScoreScreen: Screen = .{

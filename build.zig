@@ -65,6 +65,8 @@ pub fn build(b: *std.build.Builder) void {
         web.addPackage(deps.pkgs.seizer);
         web.addPackage(deps.pkgs.crossdb);
         web.addPackage(deps.pkgs.chrono);
+        web.addPackage(deps.pkgs.zigimg);
+        web.addPackage(deps.pkgs.proto_structs);
 
         // Generate JS file and copy it to install dir
         const install_js_exe = b.addExecutable("install_js", "tools/install_js.zig");
