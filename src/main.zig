@@ -103,8 +103,8 @@ pub fn onInit() !void {
         .{ .handle = filter1_node, .gain = 0.3 },
         .{ .handle = filter2_node, .gain = 0.3 },
     });
-    const delay1_input_node = try audioEngine.createDelayInputNode(volume1_node, delay1_output_node);
-    const delay2_input_node = try audioEngine.createDelayInputNode(volume2_node, delay2_output_node);
+    _ = try audioEngine.createDelayInputNode(volume1_node, delay1_output_node);
+    _ = try audioEngine.createDelayInputNode(volume2_node, delay2_output_node);
 
     audioEngine.connectToOutput(ctx.sounds.move);
     audioEngine.connectToOutput(filter1_node);
@@ -149,6 +149,8 @@ pub fn update(current_time: f64, delta: f64) anyerror!void {
 }
 
 pub fn upgradeDb(db: *crossdb.Database, oldVersion: u32, newVersion: u32) anyerror!void {
+    _ = oldVersion;
+    _ = newVersion;
     try db.createStore("scores", .{});
 }
 
@@ -163,7 +165,7 @@ pub usingnamespace if (std.builtin.os.tag == .freestanding)
                 pub const STDERR_FILENO = 1;
             };
             pub const system = struct {
-                pub fn isatty(x: anytype) i32 {
+                pub fn isatty(_: anytype) i32 {
                     return 0;
                 }
             };

@@ -107,13 +107,25 @@ pub const NullScreen: Screen = .{
     .update = update,
     .render = render,
 };
-fn init(ctx: *Context) void {}
-fn deinit(ctx: *Context) void {}
+fn init(ctx: *Context) void {
+    _ = ctx;
+}
+fn deinit(ctx: *Context) void {
+    _ = ctx;
+}
 fn event(ctx: *Context, evt: seizer.event.Event) void {
+    _ = ctx;
     switch (evt) {
         .Quit => seizer.quit(),
         else => {},
     }
 }
-fn update(ctx: *Context, current_time: f64, delta: f64) void {}
-fn render(ctx: *Context, alpha: f64) void {}
+fn update(ctx: *Context, current_time: f64, delta: f64) void {
+    _ = ctx;
+    _ = current_time;
+    _ = delta;
+}
+fn render(ctx: *Context, alpha: f64) void {
+    _ = ctx;
+    _ = alpha;
+}

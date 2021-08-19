@@ -30,6 +30,8 @@ pub fn get_bag() [7]PieceType {
 }
 
 pub fn shuffled_bag(ctx: Context) [7]PieceType {
+    _ = ctx;
+
     var seed: u64 = undefined;
     seizer.randomBytes(std.mem.asBytes(&seed));
     var rng = std.rand.DefaultPrng.init(seed);

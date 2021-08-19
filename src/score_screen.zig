@@ -28,7 +28,7 @@ fn init(ctx: *Context) void {
     seizer.execute(ctx.allocator, load_scores, .{ ctx, &scores_list, &scores_done_loading }) catch unreachable;
 }
 
-fn deinit(ctx: *Context) void {
+fn deinit(_: *Context) void {
     scores_list.deinit();
 }
 
@@ -47,7 +47,7 @@ fn event(ctx: *Context, evt: seizer.event.Event) void {
     }
 }
 
-fn render(ctx: *Context, alpha: f64) void {
+fn render(ctx: *Context, _: f64) void {
     const screen_size = seizer.getScreenSize();
     const screen_size_f = screen_size.intToFloat(f32);
 
@@ -106,7 +106,6 @@ fn load_scores(ctx: *Context, scores: *std.ArrayList(ScoreEntry), done: *bool) v
         var arena = std.heap.ArenaAllocator.init(ctx.allocator);
         defer arena.deinit();
 
-        const timestamp = std.mem.readIntBig(i64, entry.key[0..8]);
         const score_decoder = Decoder(ScoreEntry).fromBytes(entry.val) catch continue;
         const score = score_decoder.decode(&arena.allocator) catch continue;
 

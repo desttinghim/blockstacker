@@ -88,6 +88,8 @@ pub const Menu = struct {
     }
 
     pub fn render(this: @This(), ctx: *Context, alpha: f64, start_pos: Vec2f) void {
+        _ = alpha;
+
         const item_height = ctx.font.lineHeight * this.textSize;
 
         for (this.menuItems.items) |item, idx| {
@@ -108,7 +110,17 @@ pub const MenuItem = struct {
     onspin: fn (*Context, *MenuItem, bool) void = null_spin,
     ondeinit: fn (*Context, *MenuItem) void = null_deinit,
 
-    fn null_action(ctx: *Context, menuItem: *MenuItem) void {}
-    fn null_spin(ctx: *Context, menuItem: *MenuItem, increase: bool) void {}
-    fn null_deinit(ctx: *Context, menuItem: *MenuItem) void {}
+    fn null_action(ctx: *Context, menuItem: *MenuItem) void {
+        _ = ctx;
+        _ = menuItem;
+    }
+    fn null_spin(ctx: *Context, menuItem: *MenuItem, increase: bool) void {
+        _ = ctx;
+        _ = menuItem;
+        _ = increase;
+    }
+    fn null_deinit(ctx: *Context, menuItem: *MenuItem) void {
+        _ = ctx;
+        _ = menuItem;
+    }
 };

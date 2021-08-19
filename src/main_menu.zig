@@ -37,7 +37,8 @@ fn action_setup_game(ctx: *Context, _: *MenuItem) void {
     ctx.push_screen(SetupScreen) catch @panic("Switching screen somehow caused allocation");
 }
 
-fn action_quit(_ctx: *Context, _: *MenuItem) void {
+fn action_quit(ctx: *Context, _: *MenuItem) void {
+    _ = ctx;
     seizer.quit();
 }
 

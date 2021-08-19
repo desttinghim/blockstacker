@@ -54,7 +54,8 @@ pub const ScoreEntry = struct {
     triples: u32,
     tetrises: u32,
 
-    pub fn lessThan(_ctx: void, lhs: @This(), rhs: @This()) bool {
+    pub fn lessThan(ctx: void, lhs: @This(), rhs: @This()) bool {
+        _ = ctx;
         return lhs.score < rhs.score;
     }
 };

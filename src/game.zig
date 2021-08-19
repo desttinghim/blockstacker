@@ -107,7 +107,7 @@ fn fail_to_null(ctx: *Context) void {
 
 /// Resets EVERYTHING to default
 pub fn init(ctx: *Context) void {
-    grid = Grid.init(ctx.allocator, vec(10, 20)) catch |e| {
+    grid = Grid.init(ctx.allocator, vec(10, 20)) catch {
         fail_to_null(ctx);
         return;
     };
@@ -144,15 +144,15 @@ pub fn init(ctx: *Context) void {
     };
     set_level(ctx.setup.level);
 
-    score_text = std.fmt.allocPrint(ctx.allocator, "{}", .{0}) catch |e| {
+    score_text = std.fmt.allocPrint(ctx.allocator, "{}", .{0}) catch {
         fail_to_null(ctx);
         return;
     };
-    level_text = std.fmt.allocPrint(ctx.allocator, "{}", .{0}) catch |e| {
+    level_text = std.fmt.allocPrint(ctx.allocator, "{}", .{0}) catch {
         fail_to_null(ctx);
         return;
     };
-    lines_text = std.fmt.allocPrint(ctx.allocator, "{}", .{0}) catch |e| {
+    lines_text = std.fmt.allocPrint(ctx.allocator, "{}", .{0}) catch {
         fail_to_null(ctx);
         return;
     };
@@ -308,14 +308,14 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
 
         can_hold = true;
 
-        var lines = grid.clear_rows() catch |e| {
+        var lines = grid.clear_rows() catch {
             fail_to_null(ctx);
             return;
         };
         // Checks to see if the new piece collides with the grid.
         // If it is, then the game is over!
         if (piece.collides_with(piece_pos, &grid)) {
-            ctx.push_screen(GameOverScreen) catch |e| @panic("Could not push screen");
+            ctx.push_screen(GameOverScreen) catch @panic("Could not push screen");
         }
 
         score.rowsCleared += lines;
@@ -333,11 +333,11 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
         ctx.allocator.free(level_text);
         ctx.allocator.free(lines_text);
 
-        level_text = std.fmt.allocPrint(ctx.allocator, "{}", .{score.level}) catch |e| {
+        level_text = std.fmt.allocPrint(ctx.allocator, "{}", .{score.level}) catch {
             fail_to_null(ctx);
             return;
         };
-        lines_text = std.fmt.allocPrint(ctx.allocator, "{}", .{score.rowsCleared}) catch |e| {
+        lines_text = std.fmt.allocPrint(ctx.allocator, "{}", .{score.rowsCleared}) catch {
             fail_to_null(ctx);
             return;
         };
@@ -353,7 +353,7 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
 
     if (score.score != prev_score.score) {
         ctx.allocator.free(score_text);
-        score_text = std.fmt.allocPrint(ctx.allocator, "{}", .{score.score}) catch |e| {
+        score_text = std.fmt.allocPrint(ctx.allocator, "{}", .{score.score}) catch {
             fail_to_null(ctx);
             return;
         };
@@ -379,6 +379,8 @@ pub fn update(ctx: *Context, current_time: f64, delta: f64) void {
 }
 
 pub fn render(ctx: *Context, alpha: f64) void {
+    _ = alpha;
+
     const screen_size = seizer.getScreenSize();
     const screen_size_f = screen_size.intToFloat(f32);
     const grid_offset = vec(
@@ -520,19 +522,19 @@ fn go_deinit(ctx: *Context) void {
 }
 
 fn go_action_restart(ctx: *Context, _: *MenuItem) void {
-    ctx.add_score(score) catch |e| @panic("Couldn't add score to high score list");
-    ctx.set_screen(GameScreen) catch |e| @panic("Couldn't set screen");
+    ctx.add_score(score) catch @panic("Couldn't add score to high score list");
+    ctx.set_screen(GameScreen) catch @panic("Couldn't set screen");
 }
 
 fn go_action_setup(ctx: *Context, _: *MenuItem) void {
-    ctx.add_score(score) catch |e| @panic("Couldn't add score to high score list");
-    ctx.set_screen(MainMenuScreen) catch |e| @panic("Couldn't set screen");
-    ctx.push_screen(SetupScreen) catch |e| @panic("Couldn't push screen");
+    ctx.add_score(score) catch @panic("Couldn't add score to high score list");
+    ctx.set_screen(MainMenuScreen) catch @panic("Couldn't set screen");
+    ctx.push_screen(SetupScreen) catch @panic("Couldn't push screen");
 }
 
 fn go_action_main_menu(ctx: *Context, _: *MenuItem) void {
-    ctx.add_score(score) catch |e| @panic("Couldn't add score to high score list");
-    ctx.set_screen(MainMenuScreen) catch |e| @panic("Couldn't set screen");
+    ctx.add_score(score) catch @panic("Couldn't add score to high score list");
+    ctx.set_screen(MainMenuScreen) catch @panic("Couldn't set screen");
 }
 
 fn go_event(ctx: *Context, evt: seizer.event.Event) void {

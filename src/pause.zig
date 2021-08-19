@@ -40,7 +40,7 @@ fn action_restart(ctx: *Context, _: *MenuItem) void {
 }
 
 fn action_main_menu(ctx: *Context, _: *MenuItem) void {
-    ctx.set_screen(MainMenuScreen) catch |e| @panic("Couldn't set screen");
+    ctx.set_screen(MainMenuScreen) catch @panic("Couldn't set screen");
 }
 
 fn event(ctx: *Context, evt: seizer.event.Event) void {
