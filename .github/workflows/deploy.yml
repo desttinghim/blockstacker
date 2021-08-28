@@ -17,7 +17,7 @@ jobs:
               with:
                   version: master
 
-            - uses: nektro/actions-setup-zigmod
+            - uses: nektro/actions-setup-zigmod@v1
               with:
                 access-token: ${{ secrets.ACCESS_TOKEN }}
 
