@@ -17,12 +17,15 @@ jobs:
               with:
                   version: master
 
-            - uses: mattnite/setup-gyro@v1
+            - uses: nektro/actions-setup-zigmod
               with:
                 access-token: ${{ secrets.ACCESS_TOKEN }}
 
+            - name: Fetch dependencies
+              run: zigmod ci
+
             - name: Build for web target
-              run: gyro build web -Drelease-fast
+              run: zig build web -Drelease-fast
 
             - name: Deploy
               uses: JamesIves/github-pages-deploy-action@releases/v3
