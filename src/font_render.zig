@@ -42,9 +42,9 @@ pub const BitmapFontRenderer = struct {
         var scaleH: f32 = 0;
         var expected_num_pages: usize = 0;
 
-        var line_iter = std.mem.tokenize(contents, "\n\r");
+        var line_iter = std.mem.tokenize(u8, contents, "\n\r");
         while (line_iter.next()) |line| {
-            var pair_iter = std.mem.tokenize(line, " \t");
+            var pair_iter = std.mem.tokenize(u8, line, " \t");
 
             const kind = pair_iter.next() orelse continue;
 
@@ -60,7 +60,7 @@ pub const BitmapFontRenderer = struct {
                 var page: u32 = undefined;
 
                 while (pair_iter.next()) |pair| {
-                    var kv_iter = std.mem.split(pair, "=");
+                    var kv_iter = std.mem.split(u8, pair, "=");
                     const key = kv_iter.next().?;
                     const value = kv_iter.rest();
 
@@ -102,7 +102,7 @@ pub const BitmapFontRenderer = struct {
                 });
             } else if (std.mem.eql(u8, "common", kind)) {
                 while (pair_iter.next()) |pair| {
-                    var kv_iter = std.mem.split(pair, "=");
+                    var kv_iter = std.mem.split(u8, pair, "=");
                     const key = kv_iter.next().?;
                     const value = kv_iter.rest();
 
@@ -128,7 +128,7 @@ pub const BitmapFontRenderer = struct {
                 defer allocator.free(page_filename);
 
                 while (pair_iter.next()) |pair| {
-                    var kv_iter = std.mem.split(pair, "=");
+                    var kv_iter = std.mem.split(u8, pair, "=");
                     const key = kv_iter.next().?;
                     const value = kv_iter.rest();
 
