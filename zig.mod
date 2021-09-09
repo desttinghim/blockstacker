@@ -3,9 +3,6 @@ name: blockstacker
 main: src/main.zig
 dev_dependencies:
   - src: git https://github.com/leroycep/seizer
-  - src: git https://github.com/zigimg/zigimg
-    name: zigimg
-    main: zigimg.zig
   - src: git https://github.com/leroycep/crossdb
   - src: git https://github.com/leroycep/zig-proto-structs
     name: proto_structs

@@ -1,8 +1,8 @@
 const std = @import("std");
 const seizer = @import("seizer");
-const FlatRenderer = @import("flat_render.zig").FlatRenderer;
-const FontRenderer = @import("font_render.zig").BitmapFontRenderer;
-const Texture = @import("texture.zig").Texture;
+const Texture = seizer.Texture;
+const SpriteBatch = seizer.batch.SpriteBatch;
+const BitmapFont = seizer.font.Bitmap;
 const ScoreEntry = @import("score.zig").ScoreEntry;
 const Setup = @import("game.zig").Setup;
 const audio = seizer.audio;
@@ -11,8 +11,8 @@ const encode = @import("proto_structs").encode;
 const chrono = @import("chrono");
 
 pub const Context = struct {
-    flat: FlatRenderer,
-    font: FontRenderer,
+    flat: SpriteBatch,
+    font: BitmapFont,
     tileset_tex: Texture,
     allocator: *std.mem.Allocator,
     rand: *std.rand.Random,

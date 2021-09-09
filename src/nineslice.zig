@@ -3,11 +3,10 @@ const seizer = @import("seizer");
 const math = seizer.math;
 const Vec2f = math.Vec(2, f32);
 const vec2f = Vec2f.init;
-const Texture = @import("./texture.zig").Texture;
-const flat = @import("flat_render.zig");
-const FlatRenderer = flat.FlatRenderer;
-const Rect = flat.Rect;
-const Quad = flat.Quad;
+const Texture = seizer.Texture;
+const SpriteBatch = seizer.batch.SpriteBatch;
+const Rect = seizer.batch.Rect;
+const Quad = seizer.batch.Quad;
 
 fn getNineSliceQuads(pos: Vec2f, size: Vec2f, tile_size: Vec2f) [9]Quad {
     const inner_size = vec2f(size.x - tile_size.x * 2, size.y - tile_size.y * 2);
@@ -73,8 +72,8 @@ pub const NineSlice = struct {
     }
 };
 
-pub fn drawNineSlice(renderer: *FlatRenderer, texture: Texture, nineslice: NineSlice) void {
+pub fn drawNineSlice(renderer: *SpriteBatch, texture: Texture, nineslice: NineSlice) void {
     for (nineslice.quads) |quad, i| {
-        renderer.drawTextureExt(texture, quad.pos, .{ .size = quad.size, .rect = nineslice.rects[i] });
+        renderer.drawTexture(texture, quad.pos, .{ .size = quad.size, .rect = nineslice.rects[i] });
     }
 }

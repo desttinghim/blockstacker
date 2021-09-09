@@ -7,9 +7,9 @@ const Vec = seizer.math.Vec(2, usize);
 const vec = Vec.init;
 const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
-const FlatRenderer = @import("flat_render.zig").FlatRenderer;
-const FontRenderer = @import("font_render.zig").BitmapFontRenderer;
-const Texture = @import("texture.zig").Texture;
+const Texture = seizer.Texture;
+const SpriteBatch = seizer.batch.SpriteBatch;
+const BitmapFont = seizer.font.Bitmap;
 const Block = @import("grid.zig").Block;
 const Grid = @import("grid.zig").Grid;
 const Piece = @import("piece.zig").Piece;
@@ -382,7 +382,6 @@ pub fn render(ctx: *Context, alpha: f64) void {
     _ = alpha;
 
     const screen_size = seizer.getScreenSize();
-    const screen_size_f = screen_size.intToFloat(f32);
     const grid_offset = vec(
         @intCast(usize, @divTrunc(screen_size.x, 2)) - @divTrunc(grid.size.x * 16, 2),
         0,
@@ -392,7 +391,7 @@ pub fn render(ctx: *Context, alpha: f64) void {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     gl.viewport(0, 0, screen_size.x, screen_size.y);
 
-    ctx.flat.setSize(screen_size_f);
+    ctx.flat.setSize(screen_size);
 
     // Draw grid
     draw_grid_offset_bg(ctx, grid_offset, grid.size, grid.items);
@@ -461,13 +460,13 @@ fn draw_tile(ctx: *Context, id: u16, pos: Veci, opacity: f32) void {
     const texpos1 = vec2f(@intToFloat(f32, tileposx) / @intToFloat(f32, ctx.tileset_tex.size.x / TILE_W), @intToFloat(f32, tileposy) / @intToFloat(f32, ctx.tileset_tex.size.y / TILE_H));
     const texpos2 = vec2f(@intToFloat(f32, tileposx + 1) / @intToFloat(f32, ctx.tileset_tex.size.x / TILE_W), @intToFloat(f32, tileposy + 1) / @intToFloat(f32, ctx.tileset_tex.size.y / TILE_H));
 
-    ctx.flat.drawTextureExt(ctx.tileset_tex, pos.intToFloat(f32), .{
+    ctx.flat.drawTexture(ctx.tileset_tex, pos.intToFloat(f32), .{
         .size = vec2f(16, 16),
         .rect = .{
             .min = texpos1,
             .max = texpos2,
         },
-        .opacity = opacity,
+        .color = .{ .r = 0xFF, .g = 0xFF, .b = 0xFF, .a = @floatToInt(u8, opacity * 255) },
     });
 }
 

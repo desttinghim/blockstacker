@@ -65,7 +65,6 @@ pub fn build(b: *std.build.Builder) void {
         web.addPackage(deps.pkgs.seizer.pkg.?);
         web.addPackage(deps.pkgs.crossdb.pkg.?);
         web.addPackage(deps.pkgs.chrono.pkg.?);
-        web.addPackage(deps.pkgs.zigimg.pkg.?);
         web.addPackage(deps.pkgs.proto_structs.pkg.?);
 
         // Generate JS file and copy it to install dir

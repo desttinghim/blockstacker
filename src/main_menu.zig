@@ -62,7 +62,7 @@ fn render(ctx: *Context, alpha: f64) void {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, screen_size.x, screen_size.y);
 
-    ctx.flat.setSize(screen_size_f);
+    ctx.flat.setSize(screen_size);
 
     ctx.font.drawText(&ctx.flat, "BLOCKSTACKER", vec2f(screen_size_f.x / 2, 16), .{ .scale = 2, .textAlign = .Center, .textBaseline = .Top });
 
@@ -141,7 +141,7 @@ fn setup_render(ctx: *Context, alpha: f64) void {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, screen_size.x, screen_size.y);
 
-    ctx.flat.setSize(screen_size_f);
+    ctx.flat.setSize(screen_size);
 
     ctx.font.drawText(&ctx.flat, "SETUP", vec2f(screen_size_f.x / 2, 16), .{ .scale = 2, .textAlign = .Center, .textBaseline = .Top });
 

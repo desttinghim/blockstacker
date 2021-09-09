@@ -1,8 +1,8 @@
 const std = @import("std");
 const seizer = @import("seizer");
-const FlatRenderer = @import("flat_render.zig").FlatRenderer;
-const FontRenderer = @import("font_render.zig").BitmapFontRenderer;
-const Texture = @import("texture.zig").Texture;
+const Texture = seizer.Texture;
+const SpriteBatch = seizer.batch.SpriteBatch;
+const BitmapFont = seizer.font.Bitmap;
 const Context = @import("context.zig").Context;
 const Screen = @import("context.zig").Screen;
 const MainMenuScreen = @import("main_menu.zig").MainMenuScreen;
@@ -38,8 +38,8 @@ pub fn onInit() !void {
 
     var allocator = &gpa.allocator;
     try audioEngine.init(allocator);
-    var load_tileset = async Texture.initFromFile(allocator, "assets/blocks.png");
-    var load_font = async FontRenderer.initFromFile(allocator, "assets/PressStart2P_8.fnt");
+    var load_tileset = async Texture.initFromFile(allocator, "assets/blocks.png", .{});
+    var load_font = async BitmapFont.initFromFile(allocator, "assets/PressStart2P_8.fnt");
     var load_hello_sound = async audioEngine.load(allocator, "assets/slideswitch.wav", 2 * 1024 * 1024);
     var load_clock0_sound = async audioEngine.load(allocator, "assets/clock0.wav", 2 * 1024 * 1024);
     var load_clock1_sound = async audioEngine.load(allocator, "assets/clock1.wav", 2 * 1024 * 1024);
@@ -59,7 +59,7 @@ pub fn onInit() !void {
 
     ctx = .{
         .tileset_tex = try await load_tileset,
-        .flat = try FlatRenderer.init(ctx.allocator, seizer.getScreenSize().intToFloat(f32)),
+        .flat = try SpriteBatch.init(ctx.allocator, seizer.getScreenSize()),
         .font = try await load_font,
         .allocator = allocator,
         .rand = &rng.random,

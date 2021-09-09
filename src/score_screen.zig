@@ -55,7 +55,7 @@ fn render(ctx: *Context, _: f64) void {
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, screen_size.x, screen_size.y);
 
-    ctx.flat.setSize(screen_size_f);
+    ctx.flat.setSize(screen_size);
 
     if (scores_done_loading) {
         var y: f32 = (screen_size_f.y - ctx.font.lineHeight * @intToFloat(f32, scores_list.items.len)) / 2;

@@ -1,7 +1,7 @@
 2
-git https://github.com/leroycep/seizer commit-a3efd841f5e44bc18d902bdaf553d874426cc921
+git https://github.com/leroycep/seizer commit-418e5da19e82c74efd7bbacb4b2b50ba22a839e5
 git https://github.com/leroycep/zigmath.git commit-b840195b765bd290058558cdc54115d93373fcd4
-git https://github.com/zigimg/zigimg commit-4c0d3b7d13812ebf838936ee68a33b3fa75de9c1
+git https://github.com/mlarouche/zigimg.git commit-7440e18be2b3430608d3694f8e7dad21fce5cbeb
 git https://github.com/leroycep/crossdb commit-6503a07a1dcde7cfa34e0f4373784e138c03ee38
 git https://github.com/lithdew/lmdb-zig commit-b1169358b626bfe004aa7aee472ab4e493629279
 git https://git.openldap.org/openldap/openldap tag-LMDB_0.9.29
