@@ -153,21 +153,3 @@ pub fn upgradeDb(db: *crossdb.Database, oldVersion: u32, newVersion: u32) anyerr
     _ = newVersion;
     try db.createStore("scores", .{});
 }
-
-pub const log = seizer.log;
-pub const panic = seizer.panic;
-pub usingnamespace if (std.builtin.os.tag == .freestanding)
-    struct {
-        pub const os = struct {
-            pub const system = struct {
-                pub const fd_t = i32;
-                pub const STDOUT_FILENO = 0;
-                pub const STDERR_FILENO = 1;
-                pub fn isatty(_: anytype) i32 {
-                    return 0;
-                }
-            };
-        };
-    }
-else
-    struct {};
