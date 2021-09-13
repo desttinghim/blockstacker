@@ -409,9 +409,13 @@ export default function getPlatformEnv(canvas_element, getInstance) {
             gl.deleteShader(glShaders[id]);
             glShaders[id] = undefined;
         },
-        deleteTexture(id) {
-            gl.deleteTexture(glTextures[id]);
-            glTextures[id] = undefined;
+        deleteTextures(amount, ids_ptr) {
+            let ids = new Uint32Array(getMemory().buffer, ids_ptr, amount);
+            for (let i = 0; i < amount; i += 1) {
+                const id = ids[i];
+                gl.deleteTexture(glTextures[id]);
+                glTextures[id] = undefined;
+            }
         },
         deleteVertexArrays(amount, ids_ptr) {
             let ids = new Uint32Array(getMemory().buffer, ids_ptr, amount);
@@ -577,6 +581,9 @@ export default function getPlatformEnv(canvas_element, getInstance) {
         },
         uniform1i(location_id, x) {
             gl.uniform1i(glUniformLocations[location_id], x);
+        },
+        uniform2i(location_id, x, y) {
+            gl.uniform2i(glUniformLocations[location_id], x, y);
         },
         uniform4f(location_id, x, y, z, w) {
             gl.uniform4f(glUniformLocations[location_id], x, y, z, w);
