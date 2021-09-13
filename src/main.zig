@@ -159,12 +159,10 @@ pub const panic = seizer.panic;
 pub usingnamespace if (std.builtin.os.tag == .freestanding)
     struct {
         pub const os = struct {
-            pub const bits = struct {
+            pub const system = struct {
                 pub const fd_t = i32;
                 pub const STDOUT_FILENO = 0;
                 pub const STDERR_FILENO = 1;
-            };
-            pub const system = struct {
                 pub fn isatty(_: anytype) i32 {
                     return 0;
                 }

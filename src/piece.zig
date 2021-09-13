@@ -29,15 +29,13 @@ pub fn get_bag() [7]PieceType {
     return bag;
 }
 
-pub fn shuffled_bag(ctx: Context) [7]PieceType {
-    _ = ctx;
-
+pub fn shuffled_bag() [7]PieceType {
     var seed: u64 = undefined;
     seizer.randomBytes(std.mem.asBytes(&seed));
     var rng = std.rand.DefaultPrng.init(seed);
 
     var rand = &rng.random;
-    var bag = @This().get_bag();
+    var bag = get_bag();
     var i: usize = 0;
     while (i < bag.len) : (i += 1) {
         var a = rand.intRangeLessThanBiased(usize, 0, bag.len);
