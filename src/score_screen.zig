@@ -62,15 +62,16 @@ fn render(ctx: *Context, _: f64) void {
         for (scores_list.items) |entry| {
             var buf: [50]u8 = undefined;
             {
-                const dt = chrono.datetime.DateTime.utc(chrono.datetime.NaiveDateTime.from_timestamp(entry.timestamp, 0).?, ctx.timezone);
-                const naive_dt = dt.toNaiveDateTime();
+                const naivedt = chrono.datetime.NaiveDateTime.from_timestamp(entry.timestamp, 0) catch @panic("chrono");
+                const dt = chrono.datetime.DateTime.utc(naivedt, ctx.timezone);
+                const naive_dt = dt.toNaiveDateTime() catch @panic("chrono2: electric boogaloo");
                 const dt_fmt = naive_dt.formatted("%Y-%m-%d");
                 const text = std.fmt.bufPrint(&buf, "{}", .{dt_fmt}) catch continue;
                 ctx.font.drawText(&ctx.flat, text, vec2f(screen_size_f.x * 1 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
             }
             {
-                const minutes = std.math.floor(entry.playTime / std.time.s_per_min);
-                const seconds = std.math.floor(entry.playTime - minutes * std.time.s_per_min);
+                const minutes = @floor(entry.playTime / std.time.s_per_min);
+                const seconds = @floor(entry.playTime - minutes * std.time.s_per_min);
                 const text = std.fmt.bufPrint(&buf, "{d}:{d:0>2}", .{ minutes, seconds }) catch continue;
                 ctx.font.drawText(&ctx.flat, text, vec2f(screen_size_f.x * 2 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
             }
@@ -107,7 +108,7 @@ fn load_scores(ctx: *Context, scores: *std.ArrayList(ScoreEntry), done: *bool) v
         defer arena.deinit();
 
         const score_decoder = Decoder(ScoreEntry).fromBytes(entry.val) catch continue;
-        const score = score_decoder.decode(&arena.allocator) catch continue;
+        const score = score_decoder.decode(arena.allocator()) catch continue;
 
         scores.append(score) catch unreachable;
     }

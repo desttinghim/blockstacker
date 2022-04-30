@@ -18,7 +18,7 @@ pub fn i2vec(size: Vec, i: usize) ?Veci {
 }
 
 /// Shuffles a slice in place
-pub fn shuffle(comptime T: type, rand: *std.rand.Random, slice: []T) void {
+pub fn shuffle(comptime T: type, rand: std.rand.Random, slice: []T) void {
     var i: usize = 0;
     while (i < slice.len) : (i += 1) {
         var a = rand.intRangeLessThanBiased(usize, 0, slice.len);

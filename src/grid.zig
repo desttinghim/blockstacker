@@ -14,9 +14,9 @@ pub const Block = union(enum) {
 pub const Grid = struct {
     items: []Block,
     size: Vec,
-    allocator: *std.mem.Allocator,
+    allocator: std.mem.Allocator,
 
-    pub fn init(alloc: *std.mem.Allocator, size: Vec) !@This() {
+    pub fn init(alloc: std.mem.Allocator, size: Vec) !@This() {
         const items = try alloc.alloc(Block, @intCast(usize, size.x * size.y));
         std.mem.set(Block, items, Block.none);
         return @This(){

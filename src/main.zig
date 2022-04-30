@@ -36,7 +36,7 @@ pub fn onInit() !void {
     seizer.randomBytes(std.mem.asBytes(&seed));
     rng = std.rand.DefaultPrng.init(seed);
 
-    var allocator = &gpa.allocator;
+    var allocator = gpa.allocator();
     try audioEngine.init(allocator);
     var load_tileset = async Texture.initFromFile(allocator, "assets/blocks.png", .{});
     var load_font = async BitmapFont.initFromFile(allocator, "assets/PressStart2P_8.fnt");
@@ -59,10 +59,10 @@ pub fn onInit() !void {
 
     ctx = .{
         .tileset_tex = try await load_tileset,
-        .flat = try SpriteBatch.init(ctx.allocator, seizer.getScreenSize()),
+        .flat = try SpriteBatch.init(gpa.allocator(), seizer.getScreenSize()),
         .font = try await load_font,
         .allocator = allocator,
-        .rand = &rng.random,
+        .rand = rng.random(),
         .screens = std.ArrayList(Screen).init(allocator),
         .scores = std.ArrayList(ScoreEntry).init(allocator),
         .setup = .{},
@@ -82,7 +82,7 @@ pub fn onInit() !void {
         },
         .sounds = undefined,
         .db = try await open_db,
-        .timezone = try chrono.timezone.getLocalTimeZone(&gpa.allocator),
+        .timezone = try chrono.timezone.getLocalTimeZone(gpa.allocator()),
     };
 
     ctx.sounds.rotate = audioEngine.createSoundNode();

@@ -11,7 +11,7 @@ pub const Menu = struct {
     selected: usize,
     textSize: f32 = 2,
 
-    pub fn init(allocator: *std.mem.Allocator, items: []const MenuItem) !@This() {
+    pub fn init(allocator: std.mem.Allocator, items: []const MenuItem) !@This() {
         var menuItems = std.ArrayList(MenuItem).init(allocator);
         try menuItems.appendSlice(items);
         errdefer menuItems.deinit();
