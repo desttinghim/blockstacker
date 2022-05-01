@@ -3,6 +3,7 @@ const ui = @import("../ui.zig");
 const geom = @import("../geometry.zig");
 const seizer = @import("seizer");
 const Context = @import("../context.zig").Context;
+const NineSlice = @import("../nineslice.zig").NineSlice;
 
 pub const DefaultStage = ui.Stage(NodeData, Painter);
 pub const DefaultNode = DefaultStage.Node;
@@ -11,28 +12,6 @@ pub fn init(ctx: *Context) !DefaultStage {
     const painter = try Painter.initAlloc(ctx);
     return DefaultStage.init(ctx.allocator, painter);
 }
-
-// pub fn update(ui_ctx: *UIContext) void {
-//     ui_ctx.update(.{
-//         .pointer = .{
-//             .left = input.mouse(.left),
-//             .right = input.mouse(.right),
-//             .middle = input.mouse(.middle),
-//             .pos = input.mousepos(),
-//         },
-//         .keys = .{
-//             .up = input.btn(.one, .up),
-//             .down = input.btn(.one, .down),
-//             .left = input.btn(.one, .left),
-//             .right = input.btn(.one, .right),
-//             .accept = input.btn(.one, .x),
-//             .reject = input.btn(.one, .z),
-//         },
-//     });
-//     ui_ctx.layout(.{ 0, 0, 160, 160 });
-//     ui_ctx.paint();
-//     input.update();
-// }
 
 /// A simple default UI
 pub const NodeData = union(enum) {
@@ -43,8 +22,21 @@ pub const NodeData = union(enum) {
     Button: Text,
 };
 
+const Texture = seizer.Texture;
+const Vec2f = seizer.math.Vec(2, f32);
+const vec2f = Vec2f.init;
+const Vec2 = seizer.math.Vec(2, i32);
+const vec2 = Vec2.init;
+fn pixelToTex(tex: *Texture, pixel: Vec2) Vec2f {
+    return vec2f(
+        @intToFloat(f32, pixel.x) / @intToFloat(f32, tex.size.x),
+        @intToFloat(f32, pixel.y) / @intToFloat(f32, tex.size.y),
+    );
+}
+
 pub const Painter = struct {
     ctx: *Context,
+    nineslice: NineSlice,
 
     pub fn init(ctx: *Context) @This() {
         return @This(){
@@ -56,6 +48,11 @@ pub const Painter = struct {
         const this = try ctx.allocator.create(@This());
         this.* = .{
             .ctx = ctx,
+            .nineslice = NineSlice.init(
+                pixelToTex(&ctx.tileset_tex, vec2(0, 48)),
+                pixelToTex(&ctx.tileset_tex, vec2(48, 96)),
+                vec2f(16, 16),
+            ),
         };
         return this;
     }
@@ -104,11 +101,11 @@ pub const Painter = struct {
             _ = sizex;
             _ = sizey;
             // Draw background
+            this.nineslice.draw(&this.ctx.flat, this.ctx.tileset_tex, geom.rect.itof(node.bounds));
         }
         if (node.data) |data| {
             switch (data) {
                 .Label => |label| {
-                    _ = label;
                     const pos = seizer.math.Vec(2, f32).init(@intToFloat(f32, left), @intToFloat(f32, top));
                     this.ctx.font.drawText(&this.ctx.flat, label.text, pos, .{ .scale = label.size, .textBaseline = .Top });
                 },

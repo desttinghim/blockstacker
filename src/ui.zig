@@ -439,6 +439,7 @@ pub fn Stage(comptime T: type, comptime Painter: type) type {
 
             pub fn next(this: *@This()) ?EventData {
                 if (!this.run) return null;
+                if (this.ctx.nodes.items.len == 0) return null;
                 while (this.run) {
                     if (this.bubbling) |*bubble| {
                         while (bubble.iter.next()) |parent_index| {
@@ -524,7 +525,7 @@ pub fn Stage(comptime T: type, comptime Painter: type) type {
             };
             var iter = UpdateIterator{
                 .ctx = this,
-                .index = this.nodes.items.len - 1,
+                .index = this.nodes.items.len -| 1,
                 .inputs = inputs,
                 .input_info = input_info,
             };

@@ -7,8 +7,13 @@ const MenuItem = @import("menu.zig").MenuItem;
 const gl = seizer.gl;
 const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
+const Vec2 = seizer.math.Vec(2, i32);
+const vec2 = Vec2.init;
 const GameScreen = @import("game.zig").GameScreen;
 const ScoreScreen = @import("score_screen.zig").ScoreScreen;
+const NineSlice = @import("nineslice.zig").NineSlice;
+const Texture = seizer.Texture;
+const ui = @import("ui/default.zig");
 
 pub const MainMenuScreen: Screen = .{
     .init = init,
@@ -26,8 +31,11 @@ fn init(ctx: *Context) void {
         .{ .label = "Scores", .onaction = action_scores },
         .{ .label = "Quit", .onaction = action_quit },
     }) catch @panic("Couldn't set up menu");
+
     var center = menu.stage.insert(null, .{ .layout = .Center }) catch @panic("insert");
-    _ = menu.stage.insert(center, .{ .data = .{ .Label = .{ .size = 2, .text = "Hello World" } } }) catch @panic("insert");
+    const Node = ui.DefaultNode;
+    var frame = menu.stage.insert(center, Node.anchor(.{ 0, 0, 100, 100 }, .{ 8, 8, -8, -8 }).minSize(.{ 256, 256 }).hasBackground(true)) catch @panic("insert");
+    _ = menu.stage.insert(frame, .{ .data = .{ .Label = .{ .size = 2, .text = "Hello World" } } }) catch @panic("insert");
 }
 
 fn deinit(ctx: *Context) void {

@@ -217,6 +217,16 @@ pub const rect = struct {
     pub fn shiftf(rectangle: Rectf, vector: Vec2f) Rectf {
         return rectangle + vec.double(vector);
     }
+
+    /// Converts an i32 backed rect to a f32 backed one.
+    pub fn itof(rectangle: Rect) Rectf {
+        return Rectf{ @intToFloat(f32, rectangle[0]), @intToFloat(f32, rectangle[1]), @intToFloat(f32, rectangle[2]), @intToFloat(f32, rectangle[3]) };
+    }
+
+    /// Converts a f32 backed rect to an i32 backed one.
+    pub fn ftoi(rectanglef: Rectf) Rect {
+        return Rectf{ @floatToInt(i32, rectanglef[0]), @floatToInt(i32, rectanglef[1]), @floatToInt(i32, rectanglef[2]), @floatToInt(i32, rectanglef[3]) };
+    }
 };
 
 /// Represents a rectangle as .{ x, y, width, height } with integers.

@@ -7,6 +7,7 @@ const Texture = seizer.Texture;
 const SpriteBatch = seizer.batch.SpriteBatch;
 const Rect = seizer.batch.Rect;
 const Quad = seizer.batch.Quad;
+const geom = @import("geometry.zig");
 
 fn getNineSliceQuads(pos: Vec2f, size: Vec2f, tile_size: Vec2f) [9]Quad {
     const inner_size = vec2f(size.x - tile_size.x * 2, size.y - tile_size.y * 2);
@@ -34,7 +35,7 @@ fn getNineSliceQuads(pos: Vec2f, size: Vec2f, tile_size: Vec2f) [9]Quad {
     };
 }
 
-fn getNineSliceRect(pos1: Vec2f, pos2: Vec2f) [9]Rect {
+fn getNineSliceRects(pos1: Vec2f, pos2: Vec2f) [9]Rect {
     const w = pos2.x - pos1.x;
     const h = pos2.y - pos1.y;
     const h1 = pos1.x;
@@ -61,19 +62,25 @@ fn getNineSliceRect(pos1: Vec2f, pos2: Vec2f) [9]Rect {
 }
 
 pub const NineSlice = struct {
-    rects: [9]Rect,
-    quads: [9]Quad,
+    texPos1: Vec2f,
+    texPos2: Vec2f,
+    tile_size: Vec2f,
 
-    pub fn init(texPos1: Vec2f, texPos2: Vec2f, pos: Vec2f, size: Vec2f, tile_size: Vec2f) @This() {
+    pub fn init(texPos1: Vec2f, texPos2: Vec2f, tile_size: Vec2f) @This() {
         return @This(){
-            .rects = getNineSliceRect(texPos1, texPos2),
-            .quads = getNineSliceQuads(pos, size, tile_size),
+            .texPos1 = texPos1,
+            .texPos2 = texPos2,
+            .tile_size = tile_size,
         };
     }
-};
 
-pub fn drawNineSlice(renderer: *SpriteBatch, texture: Texture, nineslice: NineSlice) void {
-    for (nineslice.quads) |quad, i| {
-        renderer.drawTexture(texture, quad.pos, .{ .size = quad.size, .rect = nineslice.rects[i] });
+    pub fn draw(this: @This(), renderer: *SpriteBatch, texture: Texture, rect: geom.Rectf) void {
+        const rects = getNineSliceRects(this.texPos1, this.texPos2);
+        const tl = geom.rect.top_leftf(rect);
+        const br = geom.rect.sizef(rect);
+        const quads = getNineSliceQuads(vec2f(tl[0], tl[1]), vec2f(br[0], br[1]), this.tile_size);
+        for (quads) |quad, i| {
+            renderer.drawTexture(texture, quad.pos, .{ .size = quad.size, .rect = rects[i] });
+        }
     }
-}
+};
