@@ -509,7 +509,7 @@ var go_menu: Menu = undefined;
 
 fn go_init(ctx: *Context) void {
     score.timestamp = @divTrunc(seizer.now(), 1000);
-    go_menu = Menu.init(ctx.allocator, &.{
+    go_menu = Menu.init(ctx, &.{
         .{ .label = "Restart", .onaction = go_action_restart },
         .{ .label = "Setup", .onaction = go_action_setup },
         .{ .label = "Main Menu", .onaction = go_action_main_menu },

@@ -5,23 +5,28 @@ const seizer = @import("seizer");
 const gl = seizer.gl;
 const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
+const ui = @import("ui/default.zig");
 
 pub const Menu = struct {
+    stage: ui.DefaultStage,
     menuItems: std.ArrayList(MenuItem),
     selected: usize,
     textSize: f32 = 2,
 
-    pub fn init(allocator: std.mem.Allocator, items: []const MenuItem) !@This() {
-        var menuItems = std.ArrayList(MenuItem).init(allocator);
+    pub fn init(ctx: *Context, items: []const MenuItem) !@This() {
+        var menuItems = std.ArrayList(MenuItem).init(ctx.allocator);
         try menuItems.appendSlice(items);
         errdefer menuItems.deinit();
         return @This(){
             .menuItems = menuItems,
             .selected = 0,
+            .stage = try ui.init(ctx),
         };
     }
 
     pub fn deinit(this: *@This(), ctx: *Context) void {
+        this.stage.painter.deinit();
+        this.stage.deinit();
         for (this.menuItems.items) |*item| {
             item.ondeinit(ctx, item);
         }
@@ -72,6 +77,26 @@ pub const Menu = struct {
         if (left or right) {
             this.menuItems.items[this.selected].onspin(ctx, &this.menuItems.items[this.selected], right);
         }
+
+        var iter = this.stage.poll(.{
+            .pointer = .{
+                .left = false,
+                .right =false,
+                .middle = false,
+                .pos = .{0,0},
+            },
+            .keys = .{
+                .up = false,
+                .down = false,
+                .left = false,
+                .right = false,
+                .accept = false,
+                .reject = false,
+            },
+        });
+        while (iter.next()) |_| {}
+        const screenSize = seizer.getScreenSize();
+        this.stage.layout(.{ 0, 0, screenSize.x, screenSize.y});
     }
 
     pub fn getMinSize(this: @This(), ctx: *Context) Vec2f {
@@ -88,6 +113,8 @@ pub const Menu = struct {
     }
 
     pub fn render(this: @This(), ctx: *Context, alpha: f64, start_pos: Vec2f) void {
+        this.stage.paint();
+
         _ = alpha;
 
         const item_height = ctx.font.lineHeight * this.textSize;

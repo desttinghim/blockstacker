@@ -21,11 +21,13 @@ var menu: Menu = undefined;
 
 fn init(ctx: *Context) void {
     // TODO: Add settings screen for settings that don't affect gameplay
-    menu = Menu.init(ctx.allocator, &.{
+    menu = Menu.init(ctx, &.{
         .{ .label = "Start Game", .onaction = action_setup_game },
         .{ .label = "Scores", .onaction = action_scores },
         .{ .label = "Quit", .onaction = action_quit },
     }) catch @panic("Couldn't set up menu");
+    var center = menu.stage.insert(null, .{ .layout = .Center }) catch @panic("insert");
+    _ = menu.stage.insert(center, .{ .data = .{ .Label = .{ .size = 2, .text = "Hello World" } } }) catch @panic("insert");
 }
 
 fn deinit(ctx: *Context) void {
@@ -92,7 +94,7 @@ fn setup_init(ctx: *Context) void {
         .{ .label = "Start Game", .onaction = setup_action_start_game },
         .{ .label = level_label, .onspin = setup_spin_level, .ondeinit = spinner_deinit },
     };
-    setup_menu = Menu.init(ctx.allocator, &menu_items) catch @panic("Couldn't set up menu");
+    setup_menu = Menu.init(ctx, &menu_items) catch @panic("Couldn't set up menu");
 }
 
 fn setup_deinit(ctx: *Context) void {

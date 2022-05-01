@@ -20,7 +20,7 @@ pub const PauseScreen: Screen = .{
 var menu: Menu = undefined;
 
 fn init(ctx: *Context) void {
-    menu = Menu.init(ctx.allocator, &.{
+    menu = Menu.init(ctx, &.{
         .{ .label = "Continue", .onaction = action_continue },
         .{ .label = "Restart", .onaction = action_restart },
         .{ .label = "Main Menu", .onaction = action_main_menu },
