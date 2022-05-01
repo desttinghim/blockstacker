@@ -4,9 +4,9 @@
 
 const std = @import("std");
 
-const g = @import("geometry.zig");
-const Vec = g.Vec2;
-const Rect = g.Rect;
+const geom = @import("geometry.zig");
+const Vec = geom.Vec2;
+const Rect = geom.Rect;
 
 const Allocator = std.mem.Allocator;
 
@@ -34,7 +34,7 @@ pub const InputData = struct {
 };
 
 const InputInfo = struct {
-    pointer_diff: g.Vec2,
+    pointer_diff: geom.Vec2,
     pointer_move: bool,
     pointer_press: bool,
     pointer_release: bool,
@@ -84,9 +84,10 @@ pub const Layout = union(enum) {
 };
 
 /// Provide your basic types
-pub fn Stage(comptime T: type, comptime Painter: type) type {
-    if (!@hasDecl(Painter, "size")) @compileLog("Painter must have fn size(*Painter, T)");
-    if (!@hasDecl(Painter, "paint")) @compileLog("Painter must have fn paint(*Painter, Node)");
+pub fn Stage(comptime Style: type, comptime Painter: type, comptime T: type) type {
+    if (!@hasDecl(Painter, "size")) @compileLog("Painter must have fn size(*Painter, T) Vec2");
+    if (!@hasDecl(Painter, "padding")) @compileLog("Painter must have fn padding(*Painter, T) Rect");
+    if (!@hasDecl(Painter, "paint")) @compileLog("Painter must have fn paint(*Painter, Node) void");
     return struct {
         modified: bool,
         inputs_last: InputData = .{
@@ -110,7 +111,6 @@ pub fn Stage(comptime T: type, comptime Painter: type) type {
         reorder_op: ?Reorder,
         painter: *Painter,
 
-
         // Reorder operations that can take significant processing time, so
         // wait until we are doing layout to begin
         const Reorder = union(enum) {
@@ -127,8 +127,8 @@ pub fn Stage(comptime T: type, comptime Painter: type) type {
         pub const Node = struct {
             /// Determines whether the current node and it's children are visible
             hidden: bool = false,
-            /// Indicates whether the rect has a background and
-            has_background: bool = false,
+            /// Indicates whether the rect has a background
+            style: Style,
             /// If the node recieves pointer events
             capture_pointer: bool = false,
             /// If the node prevents other nodes from recieving events
@@ -143,6 +143,8 @@ pub fn Stage(comptime T: type, comptime Painter: type) type {
             children: usize = 0,
             /// A unique handle
             handle: usize = 0,
+            ///
+            padding: Rect = Rect{ 0, 0, 0, 0 },
             /// Minimum size of the element
             min_size: Vec = Vec{ 0, 0 },
             /// Screen space rectangle
@@ -154,7 +156,7 @@ pub fn Stage(comptime T: type, comptime Painter: type) type {
 
             const EventFilter = union(enum) { Prevent, Pass, PassExcept: Event };
 
-            pub fn anchor(_anchor: Rect, margin: Rect) @This() {
+            pub fn anchor(_anchor: Rect, margin: Rect, style: Style) @This() {
                 return @This(){
                     .layout = .{
                         .Anchor = .{
@@ -162,48 +164,56 @@ pub fn Stage(comptime T: type, comptime Painter: type) type {
                             .margin = margin,
                         },
                     },
+                    .style = style,
                 };
             }
 
-            pub fn fill() @This() {
+            pub fn fill(style: Style) @This() {
                 return @This(){
                     .layout = .Fill,
+                    .style = style,
                 };
             }
 
-            pub fn relative() @This() {
+            pub fn relative(style: Style) @This() {
                 return @This(){
                     .layout = .Relative,
+                    .style = style,
                 };
             }
 
-            pub fn center() @This() {
+            pub fn center(style: Style) @This() {
                 return @This(){
                     .layout = .Center,
+                    .style = style,
                 };
             }
 
-            pub fn vlist() @This() {
+            pub fn vlist(style: Style) @This() {
                 return @This(){
                     .layout = .{ .VList = .{} },
+                    .style = style,
                 };
             }
 
-            pub fn hlist() @This() {
+            pub fn hlist(style: Style) @This() {
                 return @This(){
                     .layout = .{ .HList = .{} },
+                    .style = style,
                 };
             }
 
-            pub fn vdiv() @This() {
+            pub fn vdiv(style: Style) @This() {
                 return @This(){
                     .layout = .{ .VDiv = .{} },
+                    .style = style,
                 };
             }
 
-            pub fn hdiv() @This() {
+            pub fn hdiv(style: Style) @This() {
                 return @This(){
                     .layout = .{ .HDiv = .{} },
+                    .style = style,
                 };
             }
 
@@ -219,9 +229,9 @@ pub fn Stage(comptime T: type, comptime Painter: type) type {
                 return node;
             }
 
-            pub fn hasBackground(this: @This(), value: bool) @This() {
+            pub fn hasStyle(this: @This(), value: Style) @This() {
                 var node = this;
-                node.has_background = value;
+                node.style = value;
                 return node;
             }
 
@@ -328,8 +338,9 @@ pub fn Stage(comptime T: type, comptime Painter: type) type {
                 index = this.nodes.items.len - 1;
                 this.nodes.items[index].handle = handle;
             }
-            if (node.data) |data| {
-                this.nodes.items[index].min_size = this.painter.size(data);
+            this.nodes.items[index].padding = this.painter.padding(node);
+            if (geom.vec.isZero(this.nodes.items[index].min_size)) {
+                this.nodes.items[index].min_size = this.painter.size(node);
             }
             return handle;
         }
@@ -350,7 +361,7 @@ pub fn Stage(comptime T: type, comptime Painter: type) type {
                     .inputs = inputs,
                     .input_info = info,
                 };
-                if (g.rect.contains(node.bounds, this.inputs.pointer.pos) and node.capture_pointer and !pointer_captured) {
+                if (geom.rect.contains(node.bounds, this.inputs.pointer.pos) and node.capture_pointer and !pointer_captured) {
                     this.ctx.nodes.items[this.index].pointer_over = true;
                     this.ctx.nodes.items[this.index].pointer_pressed = this.inputs.pointer.left;
                 } else {
@@ -513,7 +524,7 @@ pub fn Stage(comptime T: type, comptime Painter: type) type {
             const pointer_drag = //
                 inputs.pointer.left and
                 pointer_move and
-                g.vec.dist_sqr(this.pointer_start_press, inputs.pointer.pos) > drag_threshold;
+                geom.vec.dist_sqr(this.pointer_start_press, inputs.pointer.pos) > drag_threshold;
             var input_info = InputInfo{
                 .pointer_diff = pointer_diff,
                 .pointer_move = pointer_move,
@@ -581,11 +592,12 @@ pub fn Stage(comptime T: type, comptime Painter: type) type {
             if (node.layout == .HList) {
                 this.nodes.items[index].layout.HList.left = 0;
             }
+            const child_bounds = node.bounds + (node.padding * geom.Rect{ 1, 1, -1, -1 });
             var childIter = this.get_child_iter(index);
             const child_count = this.get_child_count(index);
             var child_num: usize = 0;
             while (childIter.next()) |childi| : (child_num += 1) {
-                this.nodes.items[index].layout = this.run_layout(this.nodes.items[index].layout, node.bounds, childi, child_num, child_count);
+                this.nodes.items[index].layout = this.run_layout(this.nodes.items[index].layout, child_bounds, childi, child_num, child_count);
                 // Run layout for child nodes
                 this.layout_children(childi);
             }
@@ -600,25 +612,25 @@ pub fn Stage(comptime T: type, comptime Painter: type) type {
                     return .Fill;
                 },
                 .Relative => {
-                    const pos = g.rect.top_left(bounds);
+                    const pos = geom.rect.top_left(bounds);
                     // Layout top level
                     this.nodes.items[child_index].bounds = Rect{ pos[0], pos[1], pos[0] + child.min_size[0], pos[1] + child.min_size[1] };
                     return .Relative;
                 },
                 .Center => {
                     const min_half = @divTrunc(child.min_size, Vec{ 2, 2 });
-                    const center = @divTrunc(g.rect.size(bounds), Vec{ 2, 2 });
-                    const pos = g.rect.top_left(bounds) + center - min_half;
+                    const center = @divTrunc(geom.rect.size(bounds), Vec{ 2, 2 });
+                    const pos = geom.rect.top_left(bounds) + center - min_half;
                     // Layout top level
                     this.nodes.items[child_index].bounds = Rect{ pos[0], pos[1], pos[0] + child.min_size[0], pos[1] + child.min_size[1] };
                     return .Center;
                 },
                 .Anchor => |anchor_data| {
-                    const MAX = g.vec.double(.{ 100, 100 });
-                    const size_doubled = g.vec.double((g.rect.bottom_right(bounds) - g.rect.top_left(bounds)));
-                    const anchor = g.rect.shift(
+                    const MAX = geom.vec.double(.{ 100, 100 });
+                    const size_doubled = geom.vec.double((geom.rect.bottom_right(bounds) - geom.rect.top_left(bounds)));
+                    const anchor = geom.rect.shift(
                         @divTrunc((MAX - (MAX - anchor_data.anchor)) * size_doubled, MAX),
-                        g.rect.top_left(bounds),
+                        geom.rect.top_left(bounds),
                     );
                     const margin = anchor + anchor_data.margin;
                     this.nodes.items[child_index].bounds = margin;
@@ -637,13 +649,13 @@ pub fn Stage(comptime T: type, comptime Painter: type) type {
                     return .{ .HList = .{ .left = hlist_data.left + child.min_size[0] } };
                 },
                 .VDiv => {
-                    const vsize = @divTrunc(g.rect.size(bounds)[1], @intCast(i32, child_count));
+                    const vsize = @divTrunc(geom.rect.size(bounds)[1], @intCast(i32, child_count));
                     const num = @intCast(i32, child_num);
                     this.nodes.items[child_index].bounds = Rect{ bounds[0], bounds[1] + vsize * num, bounds[2], bounds[1] + vsize * (num + 1) };
                     return .VDiv;
                 },
                 .HDiv => {
-                    const hsize = @divTrunc(g.rect.size(bounds)[0], @intCast(i32, child_count));
+                    const hsize = @divTrunc(geom.rect.size(bounds)[0], @intCast(i32, child_count));
                     const num = @intCast(i32, child_num);
                     this.nodes.items[child_index].bounds = Rect{ bounds[0] + hsize * num, bounds[1], bounds[0] + hsize * (num + 1), bounds[3] };
                     return .HDiv;

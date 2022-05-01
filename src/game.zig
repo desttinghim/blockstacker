@@ -553,8 +553,9 @@ fn go_render(ctx: *Context, alpha: f64) void {
         pixelToTex(&ctx.tileset_tex, veci(0, 48)),
         pixelToTex(&ctx.tileset_tex, veci(48, 96)),
         vec2f(16, 16),
+        2,
     );
-    nineslice.draw(&ctx.flat, ctx.tileset_tex, .{nineslice_pos.x, nineslice_pos.y, nineslice_pos.x + nineslice_size.x, nineslice_pos.y + nineslice_size.y});
+    nineslice.draw(&ctx.flat, ctx.tileset_tex, .{ nineslice_pos.x, nineslice_pos.y, nineslice_pos.x + nineslice_size.x, nineslice_pos.y + nineslice_size.y });
 
     ctx.font.drawText(&ctx.flat, "GAME OVER!", nineslice_pos.add(nineslice_size.x / 2, 16), .{ .scale = 2, .textAlign = .Center, .textBaseline = .Top });
 

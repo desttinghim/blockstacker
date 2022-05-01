@@ -32,10 +32,12 @@ fn init(ctx: *Context) void {
         .{ .label = "Quit", .onaction = action_quit },
     }) catch @panic("Couldn't set up menu");
 
-    var center = menu.stage.insert(null, .{ .layout = .Center }) catch @panic("insert");
+    var center = menu.stage.insert(null, .{ .layout = .Center, .style = .none }) catch @panic("insert");
     const Node = ui.DefaultNode;
-    var frame = menu.stage.insert(center, Node.anchor(.{ 0, 0, 100, 100 }, .{ 8, 8, -8, -8 }).minSize(.{ 256, 256 }).hasBackground(true)) catch @panic("insert");
-    _ = menu.stage.insert(frame, .{ .data = .{ .Label = .{ .size = 2, .text = "Hello World" } } }) catch @panic("insert");
+    var frame = menu.stage.insert(center, Node.anchor(.{ 0, 0, 100, 0 }, .{ 64, 32, -64, 112 }, .frame).minSize(.{ 512, 512 })) catch @panic("insert");
+    _ = menu.stage.insert(frame, .{ .style = .nameplate, .data = .{ .Label = .{ .size = 2, .text = "Hello World" } } }) catch @panic("insert");
+    const screen_size = seizer.getScreenSize();
+    menu.stage.layout(.{ 0, 0, screen_size.x, screen_size.y });
 }
 
 fn deinit(ctx: *Context) void {
