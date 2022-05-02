@@ -11,6 +11,7 @@ const ScoreEntry = @import("score.zig").ScoreEntry;
 const audio = seizer.audio;
 const crossdb = @import("crossdb");
 const chrono = @import("chrono");
+const util = @import("util.zig");
 
 pub usingnamespace seizer.run(.{
     .init = onInit,
@@ -39,6 +40,7 @@ pub fn onInit() !void {
     var allocator = gpa.allocator();
     try audioEngine.init(allocator);
     var load_tileset = async Texture.initFromFile(allocator, "assets/blocks.png", .{});
+    var load_tilemap = async util.load_tilemap_file(allocator, "assets/blocks.json", 4 * 1024);
     var load_font = async BitmapFont.initFromFile(allocator, "assets/PressStart2P_8.fnt");
     var load_hello_sound = async audioEngine.load(allocator, "assets/slideswitch.wav", 2 * 1024 * 1024);
     var load_clock0_sound = async audioEngine.load(allocator, "assets/clock0.wav", 2 * 1024 * 1024);
@@ -59,6 +61,7 @@ pub fn onInit() !void {
 
     ctx = .{
         .tileset_tex = try await load_tileset,
+        .tilemap = try await load_tilemap,
         .flat = try SpriteBatch.init(gpa.allocator(), seizer.getScreenSize()),
         .font = try await load_font,
         .allocator = allocator,
@@ -84,6 +87,8 @@ pub fn onInit() !void {
         .db = try await open_db,
         .timezone = try chrono.timezone.getLocalTimeZone(gpa.allocator()),
     };
+
+    std.log.info("{?}", .{ctx.tilemap});
 
     ctx.sounds.rotate = audioEngine.createSoundNode();
     audioEngine.connectToOutput(ctx.sounds.rotate);
@@ -121,6 +126,7 @@ pub fn onDeinit() void {
     ctx.scores.deinit();
     ctx.font.deinit();
     ctx.flat.deinit();
+    ctx.tilemap.deinit(gpa.allocator());
 
     audioEngine.freeSound(ctx.clips.rotate);
     for (ctx.clips.move) |clip| {

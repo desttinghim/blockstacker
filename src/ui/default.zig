@@ -36,11 +36,19 @@ pub const Painter = struct {
 
     pub fn init(ctx: *Context) @This() {
         const vec2 = seizer.math.Vec(2, i32).init;
-        const vec2f = seizer.math.Vec(2, f32).init;
+        // const vec2f = seizer.math.Vec(2, f32).init;
+        const fs = @intCast(i32, ctx.tilemap.ninepatches[0].size);
+        const frame9p_size = vec2(fs, fs).intToFloat(f32);
+        const frame9p_tl = vec2(ctx.tilemap.ninepatches[0].bounds[0], ctx.tilemap.ninepatches[0].bounds[1]);
+        const frame9p_br = vec2(ctx.tilemap.ninepatches[0].bounds[2], ctx.tilemap.ninepatches[0].bounds[3]);
+        const nps = @intCast(i32, ctx.tilemap.ninepatches[1].size);
+        const nameplate9p_size = vec2(nps, nps).intToFloat(f32);
+        const nameplate9p_tl = vec2(ctx.tilemap.ninepatches[1].bounds[0], ctx.tilemap.ninepatches[1].bounds[1]);
+        const nameplate9p_br = vec2(ctx.tilemap.ninepatches[1].bounds[2], ctx.tilemap.ninepatches[1].bounds[3]);
         return @This(){
             .ctx = ctx,
-            .frame9p = NineSlice.init(util.pixelToTex(&ctx.tileset_tex, vec2(0, 48)), util.pixelToTex(&ctx.tileset_tex, vec2(48, 96)), vec2f(16, 16), 2),
-            .nameplate9p = NineSlice.init(util.pixelToTex(&ctx.tileset_tex, vec2(0, 96)), util.pixelToTex(&ctx.tileset_tex, vec2(48, 144)), vec2f(16, 16), 2),
+            .frame9p = NineSlice.init(util.pixelToTex(&ctx.tileset_tex, frame9p_tl), util.pixelToTex(&ctx.tileset_tex, frame9p_br), frame9p_size, 2),
+            .nameplate9p = NineSlice.init(util.pixelToTex(&ctx.tileset_tex, nameplate9p_tl), util.pixelToTex(&ctx.tileset_tex, nameplate9p_br), nameplate9p_size, 2),
             .scale = 2,
             .scalef = 2,
         };
@@ -59,8 +67,8 @@ pub const Painter = struct {
     pub fn padding(this: *@This(), node: DefaultNode) geom.Rect {
         const pad: geom.Rect = switch (node.style) {
             .none => .{ 0, 0, 0, 0 },
-            .frame => @splat(4, 16  * this.scale),
-            .nameplate => @splat(4, 16  * this.scale),
+            .frame => @splat(4, 16 * this.scale),
+            .nameplate => @splat(4, 16 * this.scale),
         };
         return pad;
     }
@@ -91,7 +99,7 @@ pub const Painter = struct {
                 this.frame9p.draw(&this.ctx.flat, this.ctx.tileset_tex, geom.rect.itof(node.bounds));
             },
         }
-        const area = node.bounds + (geom.Rect{1,1, -1, -1} * node.padding);
+        const area = node.bounds + (geom.Rect{ 1, 1, -1, -1 } * node.padding);
         var left = geom.rect.left(area);
         var top = geom.rect.top(area);
         if (node.data) |data| {

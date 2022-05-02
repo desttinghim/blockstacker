@@ -30,6 +30,7 @@ const MenuItem = @import("menu.zig").MenuItem;
 const MainMenuScreen = @import("main_menu.zig").MainMenuScreen;
 const SetupScreen = @import("main_menu.zig").SetupScreen;
 const ScoreEntry = @import("score.zig").ScoreEntry;
+const geom = @import("geometry.zig");
 
 pub const GameScreen = .{
     .init = init,
@@ -472,11 +473,26 @@ fn draw_tile(ctx: *Context, id: u16, pos: Veci, opacity: f32) void {
     });
 }
 
+fn draw_region(ctx: *Context, rect: geom.Rect, pos: Veci, opacity: f32) void {
+    const texpos1 = vec2(rect[0], rect[1]);
+    const texpos2 = vec2(rect[2], rect[3]);
+
+    ctx.flat.drawTexture(ctx.tileset_tex, pos.intToFloat(f32), .{
+        .size = vec2f(16, 16),
+        .rect = .{
+            .min = util.pixelToTex(&ctx.tileset_tex, texpos1),
+            .max = util.pixelToTex(&ctx.tileset_tex, texpos2),
+        },
+        .color = .{ .r = 0xFF, .g = 0xFF, .b = 0xFF, .a = @floatToInt(u8, opacity * 255) },
+    });
+}
+
 fn draw_grid_offset(ctx: *Context, offset: Veci, size: Vec, dgrid: []Block, opacity: f32) void {
     for (dgrid) |block, i| {
         if (block == .some) {
             if (util.i2vec(size, i)) |pos| {
-                draw_tile(ctx, block.some, offset.addv(pos.scale(16)), opacity);
+                const rect = ctx.tilemap.blocks[block.some];
+                draw_region(ctx, rect, offset.addv(pos.scale(16)), opacity);
             }
         }
     }

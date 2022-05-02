@@ -9,11 +9,13 @@ const audio = seizer.audio;
 const crossdb = @import("crossdb");
 const encode = @import("proto_structs").encode;
 const chrono = @import("chrono");
+const Tilemap = @import("util.zig").Tilemap;
 
 pub const Context = struct {
     flat: SpriteBatch,
     font: BitmapFont,
     tileset_tex: Texture,
+    tilemap: Tilemap,
     allocator: std.mem.Allocator,
     rand: std.rand.Random,
     screens: std.ArrayList(Screen),
