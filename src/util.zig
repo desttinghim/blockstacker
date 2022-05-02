@@ -27,3 +27,15 @@ pub fn shuffle(comptime T: type, rand: std.rand.Random, slice: []T) void {
         slice[a] = current;
     }
 }
+
+const Texture = seizer.Texture;
+const Vec2f = seizer.math.Vec(2, f32);
+const vec2f = Vec2f.init;
+const Vec2 = seizer.math.Vec(2, i32);
+const vec2 = Vec2.init;
+pub fn pixelToTex(tex: *Texture, pixel: Vec2) Vec2f {
+    return vec2f(
+        @intToFloat(f32, pixel.x) / @intToFloat(f32, tex.size.x),
+        @intToFloat(f32, pixel.y) / @intToFloat(f32, tex.size.y),
+    );
+}

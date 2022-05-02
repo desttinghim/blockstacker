@@ -5,6 +5,8 @@ const Veci = seizer.math.Vec(2, isize);
 const veci = Veci.init;
 const Vec = seizer.math.Vec(2, usize);
 const vec = Vec.init;
+const Vec2 = seizer.math.Vec(2, i32);
+const vec2 = Vec2.init;
 const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
 const Texture = seizer.Texture;
@@ -498,13 +500,6 @@ pub const GameOverScreen = .{
     .render = go_render,
 };
 
-fn pixelToTex(tex: *Texture, pixel: Veci) Vec2f {
-    return vec2f(
-        @intToFloat(f32, pixel.x) / @intToFloat(f32, tex.size.x),
-        @intToFloat(f32, pixel.y) / @intToFloat(f32, tex.size.y),
-    );
-}
-
 var go_menu: Menu = undefined;
 
 fn go_init(ctx: *Context) void {
@@ -550,8 +545,8 @@ fn go_render(ctx: *Context, alpha: f64) void {
     const nineslice_pos = screen_size_f.scaleDiv(2).subv(nineslice_size.scaleDiv(2));
 
     var nineslice = NineSlice.init(
-        pixelToTex(&ctx.tileset_tex, veci(0, 48)),
-        pixelToTex(&ctx.tileset_tex, veci(48, 96)),
+        util.pixelToTex(&ctx.tileset_tex, vec2(0, 48)),
+        util.pixelToTex(&ctx.tileset_tex, vec2(48, 96)),
         vec2f(16, 16),
         2,
     );

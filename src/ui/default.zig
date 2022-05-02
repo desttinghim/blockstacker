@@ -4,6 +4,7 @@ const geom = @import("../geometry.zig");
 const seizer = @import("seizer");
 const Context = @import("../context.zig").Context;
 const NineSlice = @import("../nineslice.zig").NineSlice;
+const util = @import("../util.zig");
 
 pub const DefaultStage = ui.Stage(NodeStyle, Painter, NodeData);
 pub const DefaultNode = DefaultStage.Node;
@@ -26,18 +27,6 @@ pub const NodeStyle = enum {
     nameplate,
 };
 
-const Texture = seizer.Texture;
-const Vec2f = seizer.math.Vec(2, f32);
-const vec2f = Vec2f.init;
-const Vec2 = seizer.math.Vec(2, i32);
-const vec2 = Vec2.init;
-fn pixelToTex(tex: *Texture, pixel: Vec2) Vec2f {
-    return vec2f(
-        @intToFloat(f32, pixel.x) / @intToFloat(f32, tex.size.x),
-        @intToFloat(f32, pixel.y) / @intToFloat(f32, tex.size.y),
-    );
-}
-
 pub const Painter = struct {
     ctx: *Context,
     frame9p: NineSlice,
@@ -46,10 +35,12 @@ pub const Painter = struct {
     scalef: f32,
 
     pub fn init(ctx: *Context) @This() {
+        const vec2 = seizer.math.Vec(2, i32).init;
+        const vec2f = seizer.math.Vec(2, f32).init;
         return @This(){
             .ctx = ctx,
-            .frame9p = NineSlice.init(pixelToTex(&ctx.tileset_tex, vec2(0, 48)), pixelToTex(&ctx.tileset_tex, vec2(48, 96)), vec2f(16, 16), 2),
-            .nameplate9p = NineSlice.init(pixelToTex(&ctx.tileset_tex, vec2(0, 96)), pixelToTex(&ctx.tileset_tex, vec2(48, 144)), vec2f(16, 16), 2),
+            .frame9p = NineSlice.init(util.pixelToTex(&ctx.tileset_tex, vec2(0, 48)), util.pixelToTex(&ctx.tileset_tex, vec2(48, 96)), vec2f(16, 16), 2),
+            .nameplate9p = NineSlice.init(util.pixelToTex(&ctx.tileset_tex, vec2(0, 96)), util.pixelToTex(&ctx.tileset_tex, vec2(48, 144)), vec2f(16, 16), 2),
             .scale = 2,
             .scalef = 2,
         };
