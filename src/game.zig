@@ -565,24 +565,8 @@ fn go_event(ctx: *Context, evt: seizer.event.Event) void {
 }
 
 fn go_render(ctx: *Context, alpha: f64) void {
-    const screen_size = seizer.getScreenSize();
-    const screen_size_f = screen_size.intToFloat(f32);
-    const nineslice_size = screen_size_f.divv(vec2f(2, 2));
-    const nineslice_pos = screen_size_f.scaleDiv(2).subv(nineslice_size.scaleDiv(2));
-
-    var nineslice = NineSlice.init(
-        util.pixelToTex(&ctx.tileset_tex, vec2(0, 48)),
-        util.pixelToTex(&ctx.tileset_tex, vec2(48, 96)),
-        vec2f(16, 16),
-        2,
-    );
-    nineslice.draw(&ctx.flat, ctx.tileset_tex, .{ nineslice_pos.x, nineslice_pos.y, nineslice_pos.x + nineslice_size.x, nineslice_pos.y + nineslice_size.y });
-
-    ctx.font.drawText(&ctx.flat, "GAME OVER!", nineslice_pos.add(nineslice_size.x / 2, 16), .{ .scale = 2, .textAlign = .Center, .textBaseline = .Top });
-
     const menu_size = go_menu.getMinSize(ctx);
-    const menu_pos = nineslice_size.subv(menu_size).scaleDiv(2).addv(nineslice_pos);
-    go_menu.render(ctx, alpha, menu_pos);
+    go_menu.render(ctx, alpha, menu_size);
 
     ctx.flat.flush();
 }

@@ -70,7 +70,6 @@ fn event(ctx: *Context, evt: seizer.event.Event) void {
 
 fn render(ctx: *Context, alpha: f64) void {
     const screen_size = seizer.getScreenSize();
-    const screen_size_f = screen_size.intToFloat(f32);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -78,11 +77,8 @@ fn render(ctx: *Context, alpha: f64) void {
 
     ctx.flat.setSize(screen_size);
 
-    ctx.font.drawText(&ctx.flat, "BLOCKSTACKER", vec2f(screen_size_f.x / 2, 16), .{ .scale = 2, .textAlign = .Center, .textBaseline = .Top });
-
     const menu_size = menu.getMinSize(ctx);
-    const menu_pos = screen_size_f.subv(menu_size).scaleDiv(2);
-    menu.render(ctx, alpha, menu_pos);
+    menu.render(ctx, alpha, menu_size);
 
     ctx.flat.flush();
 }

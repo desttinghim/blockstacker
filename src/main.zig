@@ -88,8 +88,6 @@ pub fn onInit() !void {
         .timezone = try chrono.timezone.getLocalTimeZone(gpa.allocator()),
     };
 
-    std.log.info("{?}", .{ctx.tilemap});
-
     ctx.sounds.rotate = audioEngine.createSoundNode();
     audioEngine.connectToOutput(ctx.sounds.rotate);
 

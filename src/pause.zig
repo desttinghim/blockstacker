@@ -70,13 +70,16 @@ fn event(ctx: *Context, evt: seizer.event.Event) void {
 }
 
 fn render(ctx: *Context, alpha: f64) void {
-    const screen_size_f = seizer.getScreenSize().intToFloat(f32);
+    const screen_size = seizer.getScreenSize();
 
+    gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
+    gl.viewport(0, 0, screen_size.x, screen_size.y);
+
+    ctx.flat.setSize(screen_size);
 
     const menu_size = menu.getMinSize(ctx);
-    const menu_pos = screen_size_f.subv(menu_size).scaleDiv(2);
-    menu.render(ctx, alpha, menu_pos);
+    menu.render(ctx, alpha, menu_size);
 
     ctx.flat.flush();
 }
