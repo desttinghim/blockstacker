@@ -22,27 +22,26 @@ pub const PauseScreen: Screen = .{
 var menu: Menu = undefined;
 
 fn init(ctx: *Context) void {
-    menu = Menu.init(ctx, &.{
-        .{ .label = "Continue", ._type = .{.action = action_continue }},
-        .{ .label = "Restart", ._type = .{.action = action_restart }},
-        .{ .label = "Main Menu", ._type = .{.action = action_main_menu }},
-    }) catch @panic("Couldn't set up menu");
+    menu = Menu.init(ctx) catch @panic("Couldn't set up menu");
+    _ = menu.add_menu_item( .{ .label = "Continue", ._type = .{.action = action_continue }}) catch @panic("add item");
+    _ = menu.add_menu_item( .{ .label = "Restart", ._type = .{.action = action_restart }}) catch @panic("add item");
+    _ = menu.add_menu_item( .{ .label = "Main Menu", ._type = .{.action = action_main_menu }}) catch @panic("add item");
 }
 
 fn deinit(ctx: *Context) void {
     menu.deinit(ctx);
 }
 
-fn action_continue(mai: MenuAndItem, _: ui.EventData) void {
-    mai.menu.ctx.pop_screen();
+fn action_continue(menu_ptr: *Menu, _: ui.EventData) void {
+    menu_ptr.ctx.pop_screen();
 }
 
-fn action_restart(mai: MenuAndItem, _: ui.EventData) void {
-    mai.menu.ctx.set_screen(GameScreen) catch @panic("Switching screen somehow caused allocation");
+fn action_restart(menu_ptr: *Menu, _: ui.EventData) void {
+    menu_ptr.ctx.set_screen(GameScreen) catch @panic("Switching screen somehow caused allocation");
 }
 
-fn action_main_menu(mai: MenuAndItem, _: ui.EventData) void {
-    mai.menu.ctx.set_screen(MainMenuScreen) catch @panic("Couldn't set screen");
+fn action_main_menu(menu_ptr: *Menu, _: ui.EventData) void {
+    menu_ptr.ctx.set_screen(MainMenuScreen) catch @panic("Couldn't set screen");
 }
 
 fn event(ctx: *Context, evt: seizer.event.Event) void {

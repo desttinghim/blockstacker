@@ -362,9 +362,13 @@ pub fn Stage(comptime Style: type, comptime Painter: type, comptime T: type) typ
                 this.nodes.items[index].handle = handle;
             }
             this.nodes.items[index].padding = this.painter.padding(node);
-            if (geom.vec.isZero(this.nodes.items[index].min_size)) {
-                this.nodes.items[index].min_size = this.painter.size(node);
-            }
+            const min_size = this.painter.size(node);
+            this.nodes.items[index].min_size = @select(
+                i32,
+                this.nodes.items[index].min_size < min_size,
+                min_size,
+                this.nodes.items[index].min_size,
+            );
             return handle;
         }
 
@@ -621,7 +625,6 @@ pub fn Stage(comptime Style: type, comptime Painter: type, comptime T: type) typ
         pub fn compute_size(this: *@This(), node: Node, index: usize) geom.Vec2 {
             if (this.get_child_count(index) == 0) {
                 return node.min_size;
-                // this.nodes.items[index].min_size = this.painter.size(node);
             }
             // NOTE: This is assuming that a node with multiple children is a container. This should probably
             // be encoded in the type system/api instead.
@@ -634,17 +637,12 @@ pub fn Stage(comptime Style: type, comptime Painter: type, comptime T: type) typ
                 const child_total = child.min_size + geom.Vec2{ child.padding[0] + child.padding[2], child.padding[1] + child.padding[3] };
                 if (stack_vertically) {
                     min_size[1] += child_total[1];
-                    if (min_size[0] < child_total[0]) min_size[0] = child_total[0];
                 } else if (stack_horizontally) {
                     min_size[0] += child_total[0];
-                    if (min_size[1] < child_total[1]) min_size[1] = child_total[1];
-                } else {
-                    if (min_size[0] < child_total[0]) min_size[0] = child_total[0];
-                    if (min_size[1] < child_total[1]) min_size[1] = child_total[1];
                 }
+                // By default, select which ever is larger
+                min_size = @select(i32, min_size < child_total, child_total, min_size);
             }
-            // const padding = this.nodes.items[index].padding;
-            // this.nodes.items[index].min_size = min_size + geom.Vec2{ padding[0] + padding[2], padding[1] + padding[3] };
             return min_size;
         }
 
@@ -838,9 +836,6 @@ pub fn Stage(comptime Style: type, comptime Painter: type, comptime T: type) typ
         pub fn set_node(this: *@This(), node: Node) bool {
             if (this.get_index_by_handle(node.handle)) |i| {
                 this.nodes.items[i] = node;
-                if (node.data) |data| {
-                    this.nodes.items[i].min_size = this.painter.size(data);
-                }
                 this.modified = true;
                 return true;
             }

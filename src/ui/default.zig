@@ -28,6 +28,7 @@ pub const NodeStyle = enum {
     frame,
     nameplate,
     key,
+    label,
 };
 
 pub const Painter = struct {
@@ -36,6 +37,7 @@ pub const Painter = struct {
     nameplate9p: NineSlice,
     keyup9p: NineSlice,
     keydown9p: NineSlice,
+    label9p: NineSlice,
     scale: i32,
     scalef: f32,
 
@@ -56,12 +58,17 @@ pub const Painter = struct {
         const keyup9p_br = vec2(ctx.tilemap.ninepatches[2].bounds[2], ctx.tilemap.ninepatches[2].bounds[3]);
         const keydown9p_tl = vec2(ctx.tilemap.ninepatches[3].bounds[0], ctx.tilemap.ninepatches[3].bounds[1]);
         const keydown9p_br = vec2(ctx.tilemap.ninepatches[3].bounds[2], ctx.tilemap.ninepatches[3].bounds[3]);
+        const label_size = @intCast(i32, ctx.tilemap.ninepatches[4].size);
+        const label9p_size = vec2(label_size, label_size).intToFloat(f32);
+        const label9p_tl = vec2(ctx.tilemap.ninepatches[4].bounds[0], ctx.tilemap.ninepatches[4].bounds[1]);
+        const label9p_br = vec2(ctx.tilemap.ninepatches[4].bounds[2], ctx.tilemap.ninepatches[4].bounds[3]);
         return @This(){
             .ctx = ctx,
             .frame9p = NineSlice.init(util.pixelToTex(&ctx.tileset_tex, frame9p_tl), util.pixelToTex(&ctx.tileset_tex, frame9p_br), frame9p_size, 2),
             .nameplate9p = NineSlice.init(util.pixelToTex(&ctx.tileset_tex, nameplate9p_tl), util.pixelToTex(&ctx.tileset_tex, nameplate9p_br), nameplate9p_size, 2),
             .keyup9p = NineSlice.init(util.pixelToTex(&ctx.tileset_tex, keyup9p_tl), util.pixelToTex(&ctx.tileset_tex, keyup9p_br), key_size, 2),
             .keydown9p = NineSlice.init(util.pixelToTex(&ctx.tileset_tex, keydown9p_tl), util.pixelToTex(&ctx.tileset_tex, keydown9p_br), key_size, 2),
+            .label9p = NineSlice.init(util.pixelToTex(&ctx.tileset_tex, label9p_tl), util.pixelToTex(&ctx.tileset_tex, label9p_br), label9p_size, 2),
             .scale = 2,
             .scalef = 2,
         };
@@ -78,11 +85,13 @@ pub const Painter = struct {
     }
 
     pub fn padding(this: *@This(), node: DefaultNode) geom.Rect {
+        const scale = @splat(4, this.scale);
         const pad: geom.Rect = switch (node.style) {
             .none => .{ 0, 0, 0, 0 },
-            .frame => @splat(4, 16 * this.scale),
-            .nameplate => @splat(4, 16 * this.scale),
-            .key => @splat(4, 8 * this.scale),
+            .frame => @splat(4, @as(i32, 13)) * scale,
+            .nameplate => geom.Rect{ 16, 8, 16, 8 } * scale,
+            .key => geom.Rect{ 6, 5, 6, 8 } * scale,
+            .label => geom.Rect{ 3, 4, 3, 4 } * scale,
         };
         return pad;
     }
@@ -104,6 +113,7 @@ pub const Painter = struct {
     }
 
     pub fn paint(this: *@This(), node: DefaultNode) void {
+        var keydown = false;
         switch (node.style) {
             .none => {},
             .nameplate => {
@@ -112,8 +122,12 @@ pub const Painter = struct {
             .frame => {
                 this.frame9p.draw(&this.ctx.flat, this.ctx.tileset_tex, geom.rect.itof(node.bounds));
             },
+            .label => {
+                this.label9p.draw(&this.ctx.flat, this.ctx.tileset_tex, geom.rect.itof(node.bounds));
+            },
             .key => {
                 if (node.pointer_pressed) {
+                    keydown = true;
                     this.keydown9p.draw(&this.ctx.flat, this.ctx.tileset_tex, geom.rect.itof(node.bounds));
                 } else {
                     this.keyup9p.draw(&this.ctx.flat, this.ctx.tileset_tex, geom.rect.itof(node.bounds));
@@ -122,12 +136,12 @@ pub const Painter = struct {
         }
         const area = node.bounds + (geom.Rect{ 1, 1, -1, -1 } * node.padding);
         var left = geom.rect.left(area);
-        var top = geom.rect.top(area);
+        var top = if (!keydown) geom.rect.top(area) else geom.rect.top(area) + this.scale;
         if (node.data) |data| {
             switch (data) {
                 .Label => |label| {
                     const pos = seizer.math.Vec(2, f32).init(@intToFloat(f32, left), @intToFloat(f32, top));
-                    this.ctx.font.drawText(&this.ctx.flat, label.text, pos, .{ .scale = label.size, .textBaseline = .Top, .color = .{.r = 0x00, .g = 0x00, .b = 0x00, .a = 0xFF} });
+                    this.ctx.font.drawText(&this.ctx.flat, label.text, pos, .{ .scale = label.size, .textBaseline = .Top, .color = .{ .r = 0x00, .g = 0x00, .b = 0x00, .a = 0xFF } });
                 },
             }
         }

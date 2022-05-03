@@ -27,11 +27,15 @@ var menu: Menu = undefined;
 
 fn init(ctx: *Context) void {
     // TODO: Add settings screen for settings that don't affect gameplay
-    menu = Menu.init(ctx, &.{
-        .{ .label = "Start Game", ._type = .{ .action = action_setup_game } },
-        .{ .label = "Scores", ._type = .{ .action = action_score } },
-        .{ .label = "Quit", ._type = .{ .action = action_quit } },
-    }) catch @panic("Couldn't set up menu");
+    menu = Menu.init(ctx) catch @panic("menu");
+    // , &.{
+    //     .{ .label = "Start Game", ._type = .{ .action = action_setup_game } },
+    //     .{ .label = "Scores", ._type = .{ .action = action_score } },
+    //     .{ .label = "Quit", ._type = .{ .action = action_quit } },
+    // }) catch @panic("Couldn't set up menu");
+    _ = menu.add_menu_item(.{ .label = "Start Game", ._type = .{ .action = action_setup_game } }) catch @panic("Couldn't set up menu");
+    _ = menu.add_menu_item(.{ .label = "Scores", ._type = .{ .action = action_score } }) catch @panic("Couldn't set up menu");
+    _ = menu.add_menu_item(.{ .label = "Quit", ._type = .{ .action = action_quit } }) catch @panic("Couldn't set up menu");
 
     // var center = menu.stage.insert(null, .{ .layout = .Center, .style = .none }) catch @panic("insert");
     // const Node = ui.DefaultNode;
@@ -53,16 +57,16 @@ fn deinit(ctx: *Context) void {
     menu.deinit(ctx);
 }
 
-fn action_setup_game(menu_item: MenuAndItem, _: ui.EventData) void {
-    menu_item.menu.ctx.push_screen(SetupScreen) catch @panic("Switching screen somehow caused allocation");
+fn action_setup_game(menu_ptr: *Menu, _: ui.EventData) void {
+    menu_ptr.ctx.push_screen(SetupScreen) catch @panic("Switching screen somehow caused allocation");
 }
 
-fn action_quit(_: MenuAndItem, _: ui.EventData) void {
+fn action_quit(_: *Menu, _: ui.EventData) void {
     seizer.quit();
 }
 
-fn action_score(menu_item: MenuAndItem, _: ui.EventData) void {
-    menu_item.menu.ctx.push_screen(ScoreScreen) catch @panic("Switching screen somehow caused allocation");
+fn action_score(menu_ptr: *Menu, _: ui.EventData) void {
+    menu_ptr.ctx.push_screen(ScoreScreen) catch @panic("Switching screen somehow caused allocation");
 }
 
 fn event(ctx: *Context, evt: seizer.event.Event) void {
@@ -101,45 +105,64 @@ pub const SetupScreen: Screen = .{
 };
 
 var setup_menu: Menu = undefined;
+var level_label: usize = undefined;
 
 fn setup_init(ctx: *Context) void {
-    const level_label = std.fmt.allocPrint(ctx.allocator, "Level: {}", .{ctx.setup.level}) catch @panic("Couldn't format label");
-    errdefer ctx.allocator.free(level_label);
+    const level_txt = std.fmt.allocPrint(ctx.allocator, "Level: {}", .{ctx.setup.level}) catch @panic("Couldn't format label");
 
-    const menu_items = [_]MenuItem{
-        .{ .label = "Start Game", ._type = .{ .action = setup_action_start_game } },
-        .{
-            .label = level_label,
-            .ondeinit = spinner_deinit,
-            ._type = .{ .spinner = .{ .increase = setup_spin_up, .decrease = setup_spin_down } },
-        },
-    };
-    setup_menu = Menu.init(ctx, &menu_items) catch @panic("Couldn't set up menu");
+    // const menu_items = [_]MenuItem{
+    //     .{ .label = "Start Game", ._type = .{ .action = setup_action_start_game } },
+    //     .{
+    //         .label = level_label,
+    //         .ondeinit = spinner_deinit,
+    //         ._type = .{ .spinner = .{ .increase = setup_spin_up, .decrease = setup_spin_down } },
+    //     },
+    // };
+    setup_menu = Menu.init(ctx) catch @panic("Couldn't set up menu");
+    _ = setup_menu.add_menu_item(.{ .label = "Start Game", ._type = .{ .action = setup_action_start_game } }) catch @panic("Couldn't set up menu");
+    level_label = setup_menu.add_menu_item(.{ .label = level_txt, ._type = .{ .spinner = .{ .increase = setup_spin_up, .decrease = setup_spin_down } } }) catch @panic("Couldn't set up menu");
 }
 
 fn setup_deinit(ctx: *Context) void {
     setup_menu.deinit(ctx);
 }
 
-fn setup_action_start_game(mai: MenuAndItem, _: ui.EventData) void {
-    mai.menu.ctx.set_screen(GameScreen) catch @panic("Switching screen somehow caused allocation");
+fn setup_action_start_game(menu_ptr: *Menu, _: ui.EventData) void {
+    menu_ptr.ctx.set_screen(GameScreen) catch @panic("Switching screen somehow caused allocation");
 }
 
-fn setup_spin_up(mai: MenuAndItem, _: ui.EventData) void {
-    if (mai.menu.ctx.setup.level < 9) {
-        mai.menu.ctx.setup.level += 1;
+fn setup_spin_up(menu_ptr: *Menu, _: ui.EventData) void {
+    if (menu_ptr.ctx.setup.level < 9) {
+        menu_ptr.ctx.setup.level += 1;
     }
-    mai.menu.ctx.allocator.free(mai.item.label);
-    mai.item.label = std.fmt.allocPrint(mai.menu.ctx.allocator, "Level: {}", .{mai.menu.ctx.setup.level}) catch @panic("Couldn't format label");
+    if (menu_ptr.stage.get_node(level_label)) |*node| {
+        if (node.data == null) return;
+        if (node.data.? != .Label) return;
+        menu_ptr.ctx.allocator.free(node.data.?.Label.text);
+        node.data.?.Label.text = std.fmt.allocPrint(menu_ptr.ctx.allocator, "Level: {}", .{menu_ptr.ctx.setup.level}) catch @panic("Couldn't format label");
+        _ = menu_ptr.stage.set_node(node.*);
+    }
 }
-fn setup_spin_down(mai: MenuAndItem, _: ui.EventData) void {
-    mai.menu.ctx.setup.level -|= 1;
-    mai.menu.ctx.allocator.free(mai.item.label);
-    mai.item.label = std.fmt.allocPrint(mai.menu.ctx.allocator, "Level: {}", .{mai.menu.ctx.setup.level}) catch @panic("Couldn't format label");
+fn setup_spin_down(menu_ptr: *Menu, _: ui.EventData) void {
+    menu_ptr.ctx.setup.level -|= 1;
+    if (menu_ptr.stage.get_node(level_label)) |*node| {
+        if (node.data == null) return;
+        if (node.data.? != .Label) return;
+        menu_ptr.ctx.allocator.free(node.data.?.Label.text);
+        node.data.?.Label.text = std.fmt.allocPrint(menu_ptr.ctx.allocator, "Level: {}", .{menu_ptr.ctx.setup.level}) catch @panic("Couldn't format label");
+        _ = menu_ptr.stage.set_node(node.*);
+    }
 }
 
 fn spinner_deinit(ctx: *Context, item: *MenuItem) void {
-    ctx.allocator.free(item.label);
+    // TODO
+    _ = ctx;
+    _ = item;
+    // if (menu_ptr.stage.get_node(level_label)) |*node| {
+    //     if (node.data == null) return;
+    //     if (node.data.? != .Label) return;
+    //     menu_ptr.ctx.allocator.free(node.data.?.Label.text);
+    // }
 }
 
 fn setup_event(ctx: *Context, evt: seizer.event.Event) void {

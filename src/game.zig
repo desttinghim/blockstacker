@@ -522,31 +522,30 @@ var go_menu: Menu = undefined;
 
 fn go_init(ctx: *Context) void {
     score.timestamp = @divTrunc(seizer.now(), 1000);
-    go_menu = Menu.init(ctx, &.{
-        .{ .label = "Restart", ._type = .{.action = go_action_restart }},
-        .{ .label = "Setup", ._type = .{.action = go_action_setup }},
-        .{ .label = "Main Menu", ._type = .{.action = go_action_main_menu }},
-    }) catch @panic("Couldn't setup menu");
+    go_menu = Menu.init(ctx) catch @panic("Couldn't setup menu");
+    _ = go_menu.add_menu_item(.{ .label = "Restart", ._type = .{.action = go_action_restart }}) catch @panic("add menu item");
+    _ = go_menu.add_menu_item(.{ .label = "Setup", ._type = .{.action = go_action_setup }}) catch @panic("add menu item");
+    _ = go_menu.add_menu_item(.{ .label = "Main Menu", ._type = .{.action = go_action_main_menu }}) catch @panic("add menu item");
 }
 
 fn go_deinit(ctx: *Context) void {
     go_menu.deinit(ctx);
 }
 
-fn go_action_restart(mai: MenuAndItem, _: ui.EventData) void {
-    mai.menu.ctx.add_score(score) catch @panic("Couldn't add score to high score list");
-    mai.menu.ctx.set_screen(GameScreen) catch @panic("Couldn't set screen");
+fn go_action_restart(menu_ptr: *Menu, _: ui.EventData) void {
+    menu_ptr.ctx.add_score(score) catch @panic("Couldn't add score to high score list");
+    menu_ptr.ctx.set_screen(GameScreen) catch @panic("Couldn't set screen");
 }
 
-fn go_action_setup(mai: MenuAndItem, _: ui.EventData) void {
-    mai.menu.ctx.add_score(score) catch @panic("Couldn't add score to high score list");
-    mai.menu.ctx.set_screen(MainMenuScreen) catch @panic("Couldn't set screen");
-    mai.menu.ctx.push_screen(SetupScreen) catch @panic("Couldn't push screen");
+fn go_action_setup(menu_ptr: *Menu, _: ui.EventData) void {
+    menu_ptr.ctx.add_score(score) catch @panic("Couldn't add score to high score list");
+    menu_ptr.ctx.set_screen(MainMenuScreen) catch @panic("Couldn't set screen");
+    menu_ptr.ctx.push_screen(SetupScreen) catch @panic("Couldn't push screen");
 }
 
-fn go_action_main_menu(mai: MenuAndItem, _: ui.EventData) void {
-    mai.menu.ctx.add_score(score) catch @panic("Couldn't add score to high score list");
-    mai.menu.ctx.set_screen(MainMenuScreen) catch @panic("Couldn't set screen");
+fn go_action_main_menu(menu_ptr: *Menu, _: ui.EventData) void {
+    menu_ptr.ctx.add_score(score) catch @panic("Couldn't add score to high score list");
+    menu_ptr.ctx.set_screen(MainMenuScreen) catch @panic("Couldn't set screen");
 }
 
 fn go_event(ctx: *Context, evt: seizer.event.Event) void {

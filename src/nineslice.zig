@@ -47,16 +47,17 @@ pub const NineSlice = struct {
         const y3 = pos.y + size.y - ts.y;
 
         return [9]Quad{
-            .{ .pos = vec2f(x1, y1), .size = ts },
-            .{ .pos = vec2f(x2, y1), .size = vec2f(inner_size.x, ts.y) },
-            .{ .pos = vec2f(x3, y1), .size = ts },
-
-            .{ .pos = vec2f(x1, y2), .size = vec2f(ts.x, inner_size.y) },
+            // Inside first
             .{ .pos = vec2f(x2, y2), .size = inner_size },
+            // Edges second
+            .{ .pos = vec2f(x2, y1), .size = vec2f(inner_size.x, ts.y) },
+            .{ .pos = vec2f(x1, y2), .size = vec2f(ts.x, inner_size.y) },
             .{ .pos = vec2f(x3, y2), .size = vec2f(ts.x, inner_size.y) },
-
-            .{ .pos = vec2f(x1, y3), .size = ts },
             .{ .pos = vec2f(x2, y3), .size = vec2f(inner_size.x, ts.y) },
+            // Corners third
+            .{ .pos = vec2f(x1, y1), .size = ts },
+            .{ .pos = vec2f(x3, y1), .size = ts },
+            .{ .pos = vec2f(x1, y3), .size = ts },
             .{ .pos = vec2f(x3, y3), .size = ts },
         };
     }
@@ -75,16 +76,17 @@ pub const NineSlice = struct {
         const v3 = pos1.y + 2 * h / 3;
         const v4 = pos2.y;
         return [9]Rect{
-            .{ .min = vec2f(h1, v1), .max = vec2f(h2, v2) },
-            .{ .min = vec2f(h2, v1), .max = vec2f(h3, v2) },
-            .{ .min = vec2f(h3, v1), .max = vec2f(h4, v2) },
-
-            .{ .min = vec2f(h1, v2), .max = vec2f(h2, v3) },
+            // Inside first
             .{ .min = vec2f(h2, v2), .max = vec2f(h3, v3) },
+            // Edges second
+            .{ .min = vec2f(h2, v1), .max = vec2f(h3, v2) },
+            .{ .min = vec2f(h1, v2), .max = vec2f(h2, v3) },
             .{ .min = vec2f(h3, v2), .max = vec2f(h4, v3) },
-
-            .{ .min = vec2f(h1, v3), .max = vec2f(h2, v4) },
             .{ .min = vec2f(h2, v3), .max = vec2f(h3, v4) },
+            // Corners third
+            .{ .min = vec2f(h1, v1), .max = vec2f(h2, v2) },
+            .{ .min = vec2f(h3, v1), .max = vec2f(h4, v2) },
+            .{ .min = vec2f(h1, v3), .max = vec2f(h2, v4) },
             .{ .min = vec2f(h3, v3), .max = vec2f(h4, v4) },
         };
     }
