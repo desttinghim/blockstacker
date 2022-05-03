@@ -6,25 +6,46 @@ const gl = seizer.gl;
 const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
 const ui = @import("ui/default.zig");
+const geom = @import("geometry.zig");
 
 pub const Menu = struct {
+    ctx: *Context,
     stage: ui.DefaultStage,
+    audience: ui.Audience(*@This()),
     menuItems: std.ArrayList(MenuItem),
     selected: usize,
     textSize: f32 = 2,
 
     pub fn init(ctx: *Context, items: []const MenuItem) !@This() {
+        var stage = try ui.init(ctx);
+        var audience = ui.Audience(*@This()).init(ctx.allocator);
+
+        const Node = ui.DefaultNode;
+        var center = try stage.insert(null, Node.center(.none));
+        var frame = try stage.insert(center, Node.anchor(.{ 0, 0, 100, 0 }, .{ 64, 32, -64, 112 }, .frame).minSize(.{ 512, 512 }));
+        // _ = try stage.insert(frame, .{ .style = .nameplate, .data = .{ .Label = .{ .size = 2, .text = "Hello World" } } });
+        const buttons = try stage.insert(frame, Node.vlist(.none));
+
+        for (items) |item| {
+            const btn = try stage.insert(buttons, Node.relative(.key).dataValue(.{ .Label = .{ .size = 2, .text = item.label } }));
+            _ = btn;
+            // try audience.add(btn, .PointerClick, item.onaction);
+        }
+
         var menuItems = std.ArrayList(MenuItem).init(ctx.allocator);
         try menuItems.appendSlice(items);
         errdefer menuItems.deinit();
         return @This(){
+            .ctx = ctx,
             .menuItems = menuItems,
             .selected = 0,
-            .stage = try ui.init(ctx),
+            .stage = stage,
+            .audience = audience,
         };
     }
 
     pub fn deinit(this: *@This(), ctx: *Context) void {
+        this.audience.deinit();
         this.stage.painter.deinit();
         this.stage.deinit();
         for (this.menuItems.items) |*item| {
@@ -39,6 +60,8 @@ pub const Menu = struct {
         var left = false;
         var right = false;
         var activate = false;
+        var mouse_left = false;
+        var mousepos = geom.Vec2{ 0, 0 };
         switch (evt) {
             .KeyDown => |e| switch (e.scancode) {
                 .Z, .RETURN => activate = true,
@@ -55,6 +78,16 @@ pub const Menu = struct {
                 .DPAD_LEFT => left = true,
                 .DPAD_RIGHT => right = true,
                 else => {},
+            },
+            .MouseMotion => |mouse| {
+                mousepos = .{ mouse.pos.x, mouse.pos.y };
+            },
+            .MouseButtonDown => |mouse| {
+                mouse_left = mouse.button == .Left;
+                mousepos = .{ mouse.pos.x, mouse.pos.y };
+            },
+            .MouseButtonUp => |mouse| {
+                mousepos = .{ mouse.pos.x, mouse.pos.y };
             },
             else => {},
         }
@@ -80,10 +113,10 @@ pub const Menu = struct {
 
         var iter = this.stage.poll(.{
             .pointer = .{
-                .left = false,
-                .right =false,
+                .left = mouse_left,
+                .right = false,
                 .middle = false,
-                .pos = .{0,0},
+                .pos = mousepos,
             },
             .keys = .{
                 .up = false,
@@ -94,9 +127,12 @@ pub const Menu = struct {
                 .reject = false,
             },
         });
-        while (iter.next()) |_| {}
+        while (iter.next()) |uievent| {
+            this.audience.dispatch(this, uievent);
+            std.log.info("{} {} {}", .{ uievent._type, uievent.target, uievent.current });
+        }
         const screenSize = seizer.getScreenSize();
-        this.stage.layout(.{ 0, 0, screenSize.x, screenSize.y});
+        this.stage.layout(.{ 0, 0, screenSize.x, screenSize.y });
     }
 
     pub fn getMinSize(this: @This(), ctx: *Context) Vec2f {
@@ -151,3 +187,22 @@ pub const MenuItem = struct {
         _ = menuItem;
     }
 };
+
+// pub const MenuItem = struct {
+//     label: []const u8,
+//     _type: union(enum) {
+//         action: fn (*Menu, ui.EventData) void = null_action,
+//         spinner: struct {
+//             increase: fn (*Menu, ui.EventData) void = null_action,
+//             decrease: fn (*Menu, ui.EventData) void = null_action,
+//         },
+//     },
+//     ondeinit: fn (*Context, *MenuItem) void = null_deinit,
+
+//     fn null_action(_: *Menu, _:ui.EventData) void {
+//     }
+//     fn null_deinit(ctx: *Context, menuItem: *MenuItem) void {
+//         _ = ctx;
+//         _ = menuItem;
+//     }
+// };

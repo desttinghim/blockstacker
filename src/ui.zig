@@ -59,6 +59,37 @@ pub const KeyData = struct {
     reject: bool,
 };
 
+pub fn Audience(comptime T: type) type {
+    return struct {
+        const Callback = fn (T, EventData) void;
+        const Listener = struct { handle: usize, event: Event, callback: Callback };
+
+        list: std.ArrayList(Listener),
+
+        pub fn init(alloc: Allocator) @This() {
+            return @This(){
+                .list = std.ArrayList(Listener).init(alloc),
+            };
+        }
+
+        pub fn deinit(this: *@This()) void {
+            this.list.deinit();
+        }
+
+        pub fn add(this: *@This(), handle: usize, event: Event, callback: Callback) !void {
+            try this.list.append(.{ .handle = handle, .event = event, .callback = callback });
+        }
+
+        pub fn dispatch(this: *@This(), ctx: T, event: EventData) void {
+            for (this.list.items) |listener| {
+                if (event._type == listener.event and event.current == listener.handle) {
+                    listener.callback(ctx, event);
+                }
+            }
+        }
+    };
+}
+
 /// Available layout algorithms
 pub const Layout = union(enum) {
     /// Default layout of root - expands children to fill entire space
@@ -129,8 +160,6 @@ pub fn Stage(comptime Style: type, comptime Painter: type, comptime T: type) typ
             hidden: bool = false,
             /// Indicates whether the rect has a background
             style: Style,
-            /// If the node recieves pointer events
-            capture_pointer: bool = false,
             /// If the node prevents other nodes from recieving events
             event_filter: EventFilter = .Prevent,
             /// Whether the pointer is over the node
@@ -215,12 +244,6 @@ pub fn Stage(comptime Style: type, comptime Painter: type, comptime T: type) typ
                     .layout = .{ .HDiv = .{} },
                     .style = style,
                 };
-            }
-
-            pub fn capturePointer(this: @This(), value: bool) @This() {
-                var node = this;
-                node.capture_pointer = value;
-                return node;
             }
 
             pub fn eventFilter(this: @This(), value: EventFilter) @This() {
@@ -361,13 +384,13 @@ pub fn Stage(comptime Style: type, comptime Painter: type, comptime T: type) typ
                     .inputs = inputs,
                     .input_info = info,
                 };
-                if (geom.rect.contains(node.bounds, this.inputs.pointer.pos) and node.capture_pointer and !pointer_captured) {
+                if (geom.rect.contains(node.bounds, this.inputs.pointer.pos) and !pointer_captured) {
                     this.ctx.nodes.items[this.index].pointer_over = true;
                     this.ctx.nodes.items[this.index].pointer_pressed = this.inputs.pointer.left;
                 } else {
                     this.ctx.nodes.items[this.index].pointer_over = false;
                     this.ctx.nodes.items[this.index].pointer_pressed = false;
-                    if (node.capture_pointer and node.pointer_over) {
+                    if (node.pointer_over) {
                         this.current_event = .PointerLeave;
                     } else {
                         this.run = false;
@@ -464,9 +487,6 @@ pub fn Stage(comptime Style: type, comptime Painter: type, comptime T: type) typ
                                 .Prevent => {
                                     this.pointer_captured = true;
                                 },
-                            }
-                            if (parent.capture_pointer) {
-                                return bubble.event;
                             }
                             if (this.pointer_captured) break;
                         }
@@ -639,14 +659,16 @@ pub fn Stage(comptime Style: type, comptime Painter: type, comptime T: type) typ
                 .VList => |vlist_data| {
                     const _left = bounds[0];
                     const _top = bounds[1] + vlist_data.top;
-                    this.nodes.items[child_index].bounds = Rect{ _left, _top, bounds[2], _top + child.min_size[1] };
-                    return .{ .VList = .{ .top = vlist_data.top + child.min_size[1] } };
+                    const _bottom = _top + child.min_size[1] + child.padding[1] + child.padding[3];
+                    this.nodes.items[child_index].bounds = Rect{ _left, _top, bounds[2], _bottom };
+                    return .{ .VList = .{ .top = _bottom - bounds[1] } };
                 },
                 .HList => |hlist_data| {
                     const _left = bounds[0] + hlist_data.left;
                     const _top = bounds[1];
-                    this.nodes.items[child_index].bounds = Rect{ _left, _top, _left + child.min_size[0], bounds[3] };
-                    return .{ .HList = .{ .left = hlist_data.left + child.min_size[0] } };
+                    const _right = _left + child.min_size[0] + child.padding[0] + child.padding[2];
+                    this.nodes.items[child_index].bounds = Rect{ _left, _top, _right, bounds[3] };
+                    return .{ .HList = .{ .left = _right - bounds[0] } };
                 },
                 .VDiv => {
                     const vsize = @divTrunc(geom.rect.size(bounds)[1], @intCast(i32, child_count));

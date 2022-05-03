@@ -32,10 +32,18 @@ fn init(ctx: *Context) void {
         .{ .label = "Quit", .onaction = action_quit },
     }) catch @panic("Couldn't set up menu");
 
-    var center = menu.stage.insert(null, .{ .layout = .Center, .style = .none }) catch @panic("insert");
-    const Node = ui.DefaultNode;
-    var frame = menu.stage.insert(center, Node.anchor(.{ 0, 0, 100, 0 }, .{ 64, 32, -64, 112 }, .frame).minSize(.{ 512, 512 })) catch @panic("insert");
-    _ = menu.stage.insert(frame, .{ .style = .nameplate, .data = .{ .Label = .{ .size = 2, .text = "Hello World" } } }) catch @panic("insert");
+    // var center = menu.stage.insert(null, .{ .layout = .Center, .style = .none }) catch @panic("insert");
+    // const Node = ui.DefaultNode;
+    // var frame = menu.stage.insert(center, Node.anchor(.{ 0, 0, 100, 0 }, .{ 64, 32, -64, 112 }, .frame).minSize(.{ 512, 512 })) catch @panic("insert");
+    // _ = menu.stage.insert(frame, .{ .style = .nameplate, .data = .{ .Label = .{ .size = 2, .text = "Hello World" } } }) catch @panic("insert");
+    // const buttons = menu.stage.insert(frame, Node.vlist(.none)) catch @panic("insert");
+    // const btn_start = menu.stage.insert(buttons, Node.relative(.none).dataValue(.{ .Label = .{ .size = 2, .text = "Start Game" } })) catch @panic("insert");
+    // menu.audience.add(btn_start, .PointerClick, handle_setup_game) catch @panic("listen");
+    // const btn_score = menu.stage.insert(buttons, Node.relative(.none).dataValue(.{ .Label = .{ .size = 2, .text = "Scores" } })) catch @panic("insert");
+    // menu.audience.add(btn_score, .PointerClick, handle_score) catch @panic("listen");
+    // const btn_quit = menu.stage.insert(buttons, Node.relative(.none).dataValue(.{ .Label = .{ .size = 2, .text = "Quit" } })) catch @panic("insert");
+    // menu.audience.add(btn_quit, .PointerClick, handle_quit) catch @panic("listen");
+
     const screen_size = seizer.getScreenSize();
     menu.stage.layout(.{ 0, 0, screen_size.x, screen_size.y });
 }
@@ -44,9 +52,17 @@ fn deinit(ctx: *Context) void {
     menu.deinit(ctx);
 }
 
+fn handle_setup_game(m: *Menu, _: ui.EventData) void {
+    m.ctx.push_screen(SetupScreen) catch @panic("Switching screen somehow caused allocation");
+}
+
 fn action_setup_game(ctx: *Context, _: *MenuItem) void {
     // TODO: Go to setup screen instead of directly to game
     ctx.push_screen(SetupScreen) catch @panic("Switching screen somehow caused allocation");
+}
+
+fn handle_quit(_: *Menu, _: ui.EventData) void {
+    seizer.quit();
 }
 
 fn action_quit(ctx: *Context, _: *MenuItem) void {
@@ -54,8 +70,11 @@ fn action_quit(ctx: *Context, _: *MenuItem) void {
     seizer.quit();
 }
 
+fn handle_score(m: *Menu, _: ui.EventData) void {
+    m.ctx.push_screen(ScoreScreen) catch @panic("Switching screen somehow caused allocation");
+}
+
 fn action_scores(ctx: *Context, _: *MenuItem) void {
-    // TODO: Go to setup screen instead of directly to game
     ctx.push_screen(ScoreScreen) catch @panic("Switching screen somehow caused allocation");
 }
 
