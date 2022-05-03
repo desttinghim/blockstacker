@@ -514,6 +514,7 @@ fn draw_grid_offset_bg(ctx: *Context, offset: Veci, size: Vec, dgrid: []Block) v
 pub const GameOverScreen = .{
     .init = go_init,
     .deinit = go_deinit,
+    .update = go_update,
     .event = go_event,
     .render = go_render,
 };
@@ -522,10 +523,18 @@ var go_menu: Menu = undefined;
 
 fn go_init(ctx: *Context) void {
     score.timestamp = @divTrunc(seizer.now(), 1000);
-    go_menu = Menu.init(ctx) catch @panic("Couldn't setup menu");
-    _ = go_menu.add_menu_item(.{ .label = "Restart", ._type = .{.action = go_action_restart }}) catch @panic("add menu item");
-    _ = go_menu.add_menu_item(.{ .label = "Setup", ._type = .{.action = go_action_setup }}) catch @panic("add menu item");
-    _ = go_menu.add_menu_item(.{ .label = "Main Menu", ._type = .{.action = go_action_main_menu }}) catch @panic("add menu item");
+    go_menu = Menu.init(ctx, "Game Over!") catch @panic("Couldn't setup menu");
+    _ = go_menu.add_menu_item(.{ .label = "Restart", ._type = .{ .action = go_action_restart } }) catch @panic("add menu item");
+    _ = go_menu.add_menu_item(.{ .label = "Setup", ._type = .{ .action = go_action_setup } }) catch @panic("add menu item");
+    _ = go_menu.add_menu_item(.{ .label = "Main Menu", ._type = .{ .action = go_action_main_menu } }) catch @panic("add menu item");
+}
+
+fn go_update(ctx: *Context, current_time: f64, delta: f64) void {
+    _ = ctx;
+    _ = current_time;
+    _ = delta;
+    const screenSize = seizer.getScreenSize();
+    go_menu.stage.layout(.{ 0, 0, screenSize.x, screenSize.y });
 }
 
 fn go_deinit(ctx: *Context) void {

@@ -19,39 +19,18 @@ pub const Menu = struct {
     selected: usize,
     textSize: f32 = 2,
 
-    // TODO: add name paraemeter
-    pub fn init(ctx: *Context) !@This() {
+    // TODO: add name parameter
+    pub fn init(ctx: *Context, name_opt: ?[]const u8) !@This() {
         var stage = try ui.init(ctx);
         var audience = ui.Audience(*Menu).init(ctx.allocator);
 
         var center = try stage.insert(null, Node.center(.none));
         var frame = try stage.insert(center, Node.vlist(.frame));
-        // _ = try stage.insert(frame, .{ .style = .nameplate, .data = .{ .Label = .{ .size = 2, .text = "Hello World" } } });
-        // const buttons = try stage.insert(frame, Node.vlist(.none));
 
-        // for (items) |item| {
-        //     switch (item._type) {
-        //         .action => |action| {
-        //             const btn = try stage.insert(frame, Node.relative(.key).dataValue(.{ .Label = .{ .size = 2, .text = item.label } }));
-        //             try audience.add(btn, .PointerClick, action);
-        //         },
-        //         .spinner => |spin| {
-        //             const div = try stage.insert(frame, Node.hlist(.none));
+        if (name_opt) |name| {
+            _ = try stage.insert(frame, Node.relative(.nameplate).dataValue(.{.Label = .{.size = 2, .text = name}}));
+        }
 
-        //             const dec = try stage.insert(div, Node.relative(.key).dataValue(.{ .Label = .{ .size = 2, .text = "<" } }));
-        //             try audience.add(dec, .PointerClick, spin.decrease);
-
-        //             _ = try stage.insert(div, Node.relative(.label).dataValue(.{ .Label = .{ .size = 2, .text = item.label } }));
-
-        //             const inc = try stage.insert(div, Node.relative(.key).dataValue(.{ .Label = .{ .size = 2, .text = ">" } }));
-        //             try audience.add(inc, .PointerClick, spin.increase);
-        //         },
-        //     }
-        // }
-
-        // var menuItems = std.ArrayList(MenuItem).init(ctx.allocator);
-        // try menuItems.appendSlice(items);
-        // errdefer menuItems.deinit();
         return @This(){
             .ctx = ctx,
             .menuItems = std.ArrayList(MenuItem).init(ctx.allocator),
@@ -88,14 +67,14 @@ pub const Menu = struct {
         }
     }
 
-    pub fn deinit(this: *@This(), ctx: *Context) void {
-        this.audience.deinit();
-        this.stage.painter.deinit();
-        this.stage.deinit();
-        for (this.menuItems.items) |*item| {
-            item.ondeinit(ctx, item);
+    pub fn deinit(menu: *Menu, _: *Context) void {
+        for (menu.menuItems.items) |*item| {
+            item.ondeinit(menu);
         }
-        this.menuItems.deinit();
+        menu.menuItems.deinit();
+        menu.audience.deinit();
+        menu.stage.painter.deinit();
+        menu.stage.deinit();
     }
 
     pub fn event(this: *@This(), ctx: *Context, evt: seizer.event.Event) void {
@@ -174,15 +153,11 @@ pub const Menu = struct {
         var events = std.ArrayList(ui.EventData).init(ctx.allocator);
         defer events.deinit();
         while (iter.next()) |uievent| {
-            // std.log.info("{} {} {}", .{ uievent._type, uievent.target, uievent.current });
             events.append(uievent) catch @panic("thing");
         }
         for (events.items) |uievent| {
-            // const mai = MenuAndItem{ .menu = this, .item = &this.menuItems.items[0] };
             this.audience.dispatch(this, uievent);
         }
-        const screenSize = seizer.getScreenSize();
-        this.stage.layout(.{ 0, 0, screenSize.x, screenSize.y });
     }
 
     pub fn getMinSize(this: @This(), ctx: *Context) Vec2f {
@@ -204,18 +179,6 @@ pub const Menu = struct {
         _ = alpha;
         _ = ctx;
         _ = start_pos;
-
-        // const item_height = ctx.font.lineHeight * this.textSize;
-
-        // for (this.menuItems.items) |item, idx| {
-        //     const pos = start_pos.add(0, @intToFloat(f32, idx) * item_height);
-
-        //     ctx.font.drawText(&ctx.flat, item.label, pos, .{ .scale = this.textSize, .textBaseline = .Top });
-
-        //     if (this.selected == idx) {
-        //         ctx.font.drawText(&ctx.flat, ">", pos, .{ .textAlign = .Right, .scale = this.textSize, .textBaseline = .Top });
-        //     }
-        // }
     }
 };
 
@@ -228,11 +191,8 @@ pub const MenuItem = struct {
             decrease: fn (*Menu, ui.EventData) void,
         },
     } = .{ .action = null_action },
-    ondeinit: fn (*Context, *MenuItem) void = null_deinit,
+    ondeinit: fn (*Menu) void = null_deinit,
 
     fn null_action(_: *Menu, _: ui.EventData) void {}
-    fn null_deinit(ctx: *Context, menuItem: *MenuItem) void {
-        _ = ctx;
-        _ = menuItem;
-    }
+    fn null_deinit(_: *Menu) void {}
 };

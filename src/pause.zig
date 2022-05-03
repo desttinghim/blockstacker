@@ -15,6 +15,7 @@ const ui = @import("ui/default.zig");
 pub const PauseScreen: Screen = .{
     .init = init,
     .deinit = deinit,
+    .update = update,
     .event = event,
     .render = render,
 };
@@ -22,10 +23,18 @@ pub const PauseScreen: Screen = .{
 var menu: Menu = undefined;
 
 fn init(ctx: *Context) void {
-    menu = Menu.init(ctx) catch @panic("Couldn't set up menu");
-    _ = menu.add_menu_item( .{ .label = "Continue", ._type = .{.action = action_continue }}) catch @panic("add item");
-    _ = menu.add_menu_item( .{ .label = "Restart", ._type = .{.action = action_restart }}) catch @panic("add item");
-    _ = menu.add_menu_item( .{ .label = "Main Menu", ._type = .{.action = action_main_menu }}) catch @panic("add item");
+    menu = Menu.init(ctx, "Pause") catch @panic("Couldn't set up menu");
+    _ = menu.add_menu_item(.{ .label = "Continue", ._type = .{ .action = action_continue } }) catch @panic("add item");
+    _ = menu.add_menu_item(.{ .label = "Restart", ._type = .{ .action = action_restart } }) catch @panic("add item");
+    _ = menu.add_menu_item(.{ .label = "Main Menu", ._type = .{ .action = action_main_menu } }) catch @panic("add item");
+}
+
+fn update(ctx: *Context, current_time: f64, delta: f64) void {
+    _ = ctx;
+    _ = current_time;
+    _ = delta;
+    const screenSize = seizer.getScreenSize();
+    menu.stage.layout(.{ 0, 0, screenSize.x, screenSize.y });
 }
 
 fn deinit(ctx: *Context) void {
