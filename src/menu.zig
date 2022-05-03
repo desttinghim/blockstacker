@@ -11,25 +11,39 @@ const geom = @import("geometry.zig");
 pub const Menu = struct {
     ctx: *Context,
     stage: ui.DefaultStage,
-    audience: ui.Audience(*@This()),
+    audience: ui.Audience(MenuAndItem),
     menuItems: std.ArrayList(MenuItem),
     selected: usize,
     textSize: f32 = 2,
 
     pub fn init(ctx: *Context, items: []const MenuItem) !@This() {
         var stage = try ui.init(ctx);
-        var audience = ui.Audience(*@This()).init(ctx.allocator);
+        var audience = ui.Audience(MenuAndItem).init(ctx.allocator);
 
         const Node = ui.DefaultNode;
         var center = try stage.insert(null, Node.center(.none));
-        var frame = try stage.insert(center, Node.anchor(.{ 0, 0, 100, 0 }, .{ 64, 32, -64, 112 }, .frame).minSize(.{ 512, 512 }));
+        var frame = try stage.insert(center, Node.vlist(.frame));
         // _ = try stage.insert(frame, .{ .style = .nameplate, .data = .{ .Label = .{ .size = 2, .text = "Hello World" } } });
-        const buttons = try stage.insert(frame, Node.vlist(.none));
+        // const buttons = try stage.insert(frame, Node.vlist(.none));
 
         for (items) |item| {
-            const btn = try stage.insert(buttons, Node.relative(.key).dataValue(.{ .Label = .{ .size = 2, .text = item.label } }));
-            _ = btn;
-            // try audience.add(btn, .PointerClick, item.onaction);
+            switch (item._type) {
+                .action => |action| {
+                    const btn = try stage.insert(frame, Node.relative(.key).dataValue(.{ .Label = .{ .size = 2, .text = item.label } }));
+                    try audience.add(btn, .PointerClick, action);
+                },
+                .spinner => |spin| {
+                    const div = try stage.insert(frame, Node.hlist(.none));
+
+                    const dec = try stage.insert(div, Node.relative(.key).dataValue(.{ .Label = .{ .size = 2, .text = "<" } }));
+                    try audience.add(dec, .PointerClick, spin.decrease);
+
+                    _ = try stage.insert(div, Node.relative(.nameplate).dataValue(.{ .Label = .{ .size = 2, .text = item.label } }));
+
+                    const inc = try stage.insert(div, Node.relative(.key).dataValue(.{ .Label = .{ .size = 2, .text = ">" } }));
+                    try audience.add(inc, .PointerClick, spin.increase);
+                },
+            }
         }
 
         var menuItems = std.ArrayList(MenuItem).init(ctx.allocator);
@@ -54,7 +68,7 @@ pub const Menu = struct {
         this.menuItems.deinit();
     }
 
-    pub fn event(this: *@This(), ctx: *Context, evt: seizer.event.Event) void {
+    pub fn event(this: *@This(), _: *Context, evt: seizer.event.Event) void {
         var up = false;
         var down = false;
         var left = false;
@@ -104,12 +118,12 @@ pub const Menu = struct {
                 this.selected = new_selected;
             }
         }
-        if (activate) {
-            this.menuItems.items[this.selected].onaction(ctx, &this.menuItems.items[this.selected]);
-        }
-        if (left or right) {
-            this.menuItems.items[this.selected].onspin(ctx, &this.menuItems.items[this.selected], right);
-        }
+        // if (activate) {
+        //     this.menuItems.items[this.selected].onaction(ctx, &this.menuItems.items[this.selected]);
+        // }
+        // if (left or right) {
+        //     this.menuItems.items[this.selected].onspin(ctx, &this.menuItems.items[this.selected], right);
+        // }
 
         var iter = this.stage.poll(.{
             .pointer = .{
@@ -128,8 +142,9 @@ pub const Menu = struct {
             },
         });
         while (iter.next()) |uievent| {
-            this.audience.dispatch(this, uievent);
             std.log.info("{} {} {}", .{ uievent._type, uievent.target, uievent.current });
+            const mai = MenuAndItem{ .menu = this, .item = &this.menuItems.items[0] };
+            this.audience.dispatch(mai, uievent);
         }
         const screenSize = seizer.getScreenSize();
         this.stage.layout(.{ 0, 0, screenSize.x, screenSize.y });
@@ -167,42 +182,46 @@ pub const Menu = struct {
     }
 };
 
-pub const MenuItem = struct {
-    label: []const u8,
-    onaction: fn (*Context, *MenuItem) void = null_action,
-    onspin: fn (*Context, *MenuItem, bool) void = null_spin,
-    ondeinit: fn (*Context, *MenuItem) void = null_deinit,
-
-    fn null_action(ctx: *Context, menuItem: *MenuItem) void {
-        _ = ctx;
-        _ = menuItem;
-    }
-    fn null_spin(ctx: *Context, menuItem: *MenuItem, increase: bool) void {
-        _ = ctx;
-        _ = menuItem;
-        _ = increase;
-    }
-    fn null_deinit(ctx: *Context, menuItem: *MenuItem) void {
-        _ = ctx;
-        _ = menuItem;
-    }
-};
-
 // pub const MenuItem = struct {
 //     label: []const u8,
-//     _type: union(enum) {
-//         action: fn (*Menu, ui.EventData) void = null_action,
-//         spinner: struct {
-//             increase: fn (*Menu, ui.EventData) void = null_action,
-//             decrease: fn (*Menu, ui.EventData) void = null_action,
-//         },
-//     },
+//     onaction: fn (*Context, *MenuItem) void = null_action,
+//     onspin: fn (*Context, *MenuItem, bool) void = null_spin,
 //     ondeinit: fn (*Context, *MenuItem) void = null_deinit,
 
-//     fn null_action(_: *Menu, _:ui.EventData) void {
+//     fn null_action(ctx: *Context, menuItem: *MenuItem) void {
+//         _ = ctx;
+//         _ = menuItem;
+//     }
+//     fn null_spin(ctx: *Context, menuItem: *MenuItem, increase: bool) void {
+//         _ = ctx;
+//         _ = menuItem;
+//         _ = increase;
 //     }
 //     fn null_deinit(ctx: *Context, menuItem: *MenuItem) void {
 //         _ = ctx;
 //         _ = menuItem;
 //     }
 // };
+
+pub const MenuAndItem = struct {
+    menu: *Menu,
+    item: *MenuItem,
+};
+
+pub const MenuItem = struct {
+    label: []const u8,
+    _type: union(enum) {
+        action: fn (MenuAndItem, ui.EventData) void,
+        spinner: struct {
+            increase: fn (MenuAndItem, ui.EventData) void,
+            decrease: fn (MenuAndItem, ui.EventData) void,
+        },
+    } = .{ .action = null_action },
+    ondeinit: fn (*Context, *MenuItem) void = null_deinit,
+
+    fn null_action(_: MenuAndItem, _: ui.EventData) void {}
+    fn null_deinit(ctx: *Context, menuItem: *MenuItem) void {
+        _ = ctx;
+        _ = menuItem;
+    }
+};

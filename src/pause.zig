@@ -4,11 +4,13 @@ const Context = @import("context.zig").Context;
 const seizer = @import("seizer");
 const Menu = @import("menu.zig").Menu;
 const MenuItem = @import("menu.zig").MenuItem;
+const MenuAndItem = @import("menu.zig").MenuAndItem;
 const gl = seizer.gl;
 const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
 const MainMenuScreen = @import("main_menu.zig").MainMenuScreen;
 const GameScreen = @import("game.zig").GameScreen;
+const ui = @import("ui/default.zig");
 
 pub const PauseScreen: Screen = .{
     .init = init,
@@ -21,9 +23,9 @@ var menu: Menu = undefined;
 
 fn init(ctx: *Context) void {
     menu = Menu.init(ctx, &.{
-        .{ .label = "Continue", .onaction = action_continue },
-        .{ .label = "Restart", .onaction = action_restart },
-        .{ .label = "Main Menu", .onaction = action_main_menu },
+        .{ .label = "Continue", ._type = .{.action = action_continue }},
+        .{ .label = "Restart", ._type = .{.action = action_restart }},
+        .{ .label = "Main Menu", ._type = .{.action = action_main_menu }},
     }) catch @panic("Couldn't set up menu");
 }
 
@@ -31,16 +33,16 @@ fn deinit(ctx: *Context) void {
     menu.deinit(ctx);
 }
 
-fn action_continue(ctx: *Context, _: *MenuItem) void {
-    ctx.pop_screen();
+fn action_continue(mai: MenuAndItem, _: ui.EventData) void {
+    mai.menu.ctx.pop_screen();
 }
 
-fn action_restart(ctx: *Context, _: *MenuItem) void {
-    ctx.set_screen(GameScreen) catch @panic("Switching screen somehow caused allocation");
+fn action_restart(mai: MenuAndItem, _: ui.EventData) void {
+    mai.menu.ctx.set_screen(GameScreen) catch @panic("Switching screen somehow caused allocation");
 }
 
-fn action_main_menu(ctx: *Context, _: *MenuItem) void {
-    ctx.set_screen(MainMenuScreen) catch @panic("Couldn't set screen");
+fn action_main_menu(mai: MenuAndItem, _: ui.EventData) void {
+    mai.menu.ctx.set_screen(MainMenuScreen) catch @panic("Couldn't set screen");
 }
 
 fn event(ctx: *Context, evt: seizer.event.Event) void {

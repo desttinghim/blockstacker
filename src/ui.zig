@@ -586,6 +586,8 @@ pub fn Stage(comptime Style: type, comptime Painter: type, comptime T: type) typ
                 this.reorder();
             }
 
+            this.run_sizing();
+
             if (this.root_layout == .VList) {
                 this.root_layout.VList.top = 0;
             }
@@ -602,6 +604,48 @@ pub fn Stage(comptime Style: type, comptime Painter: type, comptime T: type) typ
                 // Run layout for child nodes
                 this.layout_children(childi);
             }
+        }
+
+        pub fn run_sizing(this: *@This()) void {
+            var i: usize = this.nodes.items.len - 1;
+            while (i > 0) : (i -|= 1) {
+                const node = this.nodes.items[i];
+                if (node.hidden) {
+                    continue;
+                }
+                this.nodes.items[i].min_size = this.compute_size(node, i);
+                if (i == 0) break;
+            }
+        }
+
+        pub fn compute_size(this: *@This(), node: Node, index: usize) geom.Vec2 {
+            if (this.get_child_count(index) == 0) {
+                return node.min_size;
+                // this.nodes.items[index].min_size = this.painter.size(node);
+            }
+            // NOTE: This is assuming that a node with multiple children is a container. This should probably
+            // be encoded in the type system/api instead.
+            const stack_vertically = node.layout == .VList or node.layout == .VDiv;
+            const stack_horizontally = node.layout == .HList or node.layout == .HDiv;
+            var min_size = geom.Vec2{ node.padding[0] + node.padding[1], node.padding[2] + node.padding[3] };
+            var child_iter = this.get_child_iter(index);
+            while (child_iter.next()) |child_index| {
+                const child = this.nodes.items[child_index];
+                const child_total = child.min_size + geom.Vec2{ child.padding[0] + child.padding[2], child.padding[1] + child.padding[3] };
+                if (stack_vertically) {
+                    min_size[1] += child_total[1];
+                    if (min_size[0] < child_total[0]) min_size[0] = child_total[0];
+                } else if (stack_horizontally) {
+                    min_size[0] += child_total[0];
+                    if (min_size[1] < child_total[1]) min_size[1] = child_total[1];
+                } else {
+                    if (min_size[0] < child_total[0]) min_size[0] = child_total[0];
+                    if (min_size[1] < child_total[1]) min_size[1] = child_total[1];
+                }
+            }
+            // const padding = this.nodes.items[index].padding;
+            // this.nodes.items[index].min_size = min_size + geom.Vec2{ padding[0] + padding[2], padding[1] + padding[3] };
+            return min_size;
         }
 
         pub fn layout_children(this: *@This(), index: usize) void {
@@ -626,6 +670,8 @@ pub fn Stage(comptime Style: type, comptime Painter: type, comptime T: type) typ
         /// Runs the layout function and returns the new state of the layout component, if applicable
         fn run_layout(this: *@This(), which_layout: Layout, bounds: Rect, child_index: usize, child_num: usize, child_count: usize) Layout {
             const child = this.nodes.items[child_index];
+            const padding = geom.Vec2{ child.padding[0] + child.padding[2], child.padding[1] + child.padding[3] };
+            const total = child.min_size + padding;
             switch (which_layout) {
                 .Fill => {
                     this.nodes.items[child_index].bounds = bounds;
@@ -633,16 +679,14 @@ pub fn Stage(comptime Style: type, comptime Painter: type, comptime T: type) typ
                 },
                 .Relative => {
                     const pos = geom.rect.top_left(bounds);
-                    // Layout top level
-                    this.nodes.items[child_index].bounds = Rect{ pos[0], pos[1], pos[0] + child.min_size[0], pos[1] + child.min_size[1] };
+                    this.nodes.items[child_index].bounds = Rect{ pos[0], pos[1], pos[0] + total[0], pos[1] + total[1] };
                     return .Relative;
                 },
                 .Center => {
-                    const min_half = @divTrunc(child.min_size, Vec{ 2, 2 });
+                    const min_half = @divTrunc(total, Vec{ 2, 2 });
                     const center = @divTrunc(geom.rect.size(bounds), Vec{ 2, 2 });
                     const pos = geom.rect.top_left(bounds) + center - min_half;
-                    // Layout top level
-                    this.nodes.items[child_index].bounds = Rect{ pos[0], pos[1], pos[0] + child.min_size[0], pos[1] + child.min_size[1] };
+                    this.nodes.items[child_index].bounds = Rect{ pos[0], pos[1], pos[0] + total[0], pos[1] + total[1] };
                     return .Center;
                 },
                 .Anchor => |anchor_data| {
@@ -659,14 +703,14 @@ pub fn Stage(comptime Style: type, comptime Painter: type, comptime T: type) typ
                 .VList => |vlist_data| {
                     const _left = bounds[0];
                     const _top = bounds[1] + vlist_data.top;
-                    const _bottom = _top + child.min_size[1] + child.padding[1] + child.padding[3];
+                    const _bottom = _top + total[1];
                     this.nodes.items[child_index].bounds = Rect{ _left, _top, bounds[2], _bottom };
                     return .{ .VList = .{ .top = _bottom - bounds[1] } };
                 },
                 .HList => |hlist_data| {
                     const _left = bounds[0] + hlist_data.left;
                     const _top = bounds[1];
-                    const _right = _left + child.min_size[0] + child.padding[0] + child.padding[2];
+                    const _right = _left + total[0];
                     this.nodes.items[child_index].bounds = Rect{ _left, _top, _right, bounds[3] };
                     return .{ .HList = .{ .left = _right - bounds[0] } };
                 },
@@ -690,9 +734,9 @@ pub fn Stage(comptime Style: type, comptime Painter: type, comptime T: type) typ
             index: usize,
             end: usize,
             pub fn next(this: *@This()) ?usize {
-                if (this.index > this.end or this.index >= this.nodes.len) return null;
+                if (this.index > this.end or this.index > this.nodes.len) return null;
                 const index = this.index;
-                const node = this.nodes[this.index];
+                const node = this.nodes[index];
                 this.index += node.children + 1;
                 return index;
             }
