@@ -89,7 +89,7 @@ pub const Painter = struct {
         const pad: geom.Rect = switch (node.style) {
             .none => .{ 0, 0, 0, 0 },
             .frame => @splat(4, @as(i32, 13)) * scale,
-            .nameplate => geom.Rect{ 16, 8, 16, 8 } * scale,
+            .nameplate => geom.Rect{ 16, 12, 16, 12 } * scale,
             .key => geom.Rect{ 6, 5, 6, 8 } * scale,
             .label => geom.Rect{ 3, 4, 3, 4 } * scale,
         };
