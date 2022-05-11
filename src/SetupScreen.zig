@@ -1,5 +1,4 @@
 const std = @import("std");
-const Screen = @import("context.zig").Screen;
 const Context = @import("context.zig").Context;
 const seizer = @import("seizer");
 const Menu = @import("menu.zig").Menu;
@@ -16,108 +15,35 @@ const NineSlice = @import("nineslice.zig").NineSlice;
 const Texture = seizer.Texture;
 const ui = @import("ui/default.zig");
 
-pub const MainMenuScreen: Screen = .{
-    .init = init,
-    .deinit = deinit,
-    .update = update,
-    .event = event,
-    .render = render,
-};
-
-var menu: Menu = undefined;
-
-fn init(ctx: *Context) void {
-    // TODO: Add settings screen for settings that don't affect gameplay
-    menu = Menu.init(ctx, "BlockStacker") catch @panic("menu");
-    _ = menu.add_menu_item(.{ .label = "Start Game", ._type = .{ .action = action_setup_game } }) catch @panic("Couldn't set up menu");
-    _ = menu.add_menu_item(.{ .label = "Scores", ._type = .{ .action = action_score } }) catch @panic("Couldn't set up menu");
-    _ = menu.add_menu_item(.{ .label = "Quit", ._type = .{ .action = action_quit } }) catch @panic("Couldn't set up menu");
-
-    const screen_size = seizer.getScreenSize();
-    menu.stage.layout(.{ 0, 0, screen_size.x, screen_size.y });
-}
-
-fn update(ctx: *Context, current_time: f64, delta: f64) void {
-    _ = ctx;
-    _ = current_time;
-    _ = delta;
-    const screenSize = seizer.getScreenSize();
-    menu.stage.layout(.{ 0, 0, screenSize.x, screenSize.y });
-}
-
-fn deinit(ctx: *Context) void {
-    menu.deinit(ctx);
-}
-
-fn action_setup_game(menu_ptr: *Menu, _: ui.EventData) void {
-    menu_ptr.ctx.push_screen(SetupScreen) catch @panic("Switching screen somehow caused allocation");
-}
-
-fn action_quit(_: *Menu, _: ui.EventData) void {
-    seizer.quit();
-}
-
-fn action_score(menu_ptr: *Menu, _: ui.EventData) void {
-    menu_ptr.ctx.push_screen(ScoreScreen) catch @panic("Switching screen somehow caused allocation");
-}
-
-fn event(ctx: *Context, evt: seizer.event.Event) void {
-    menu.event(ctx, evt);
-    if (evt == .Quit) {
-        seizer.quit();
-    }
-}
-
-fn render(ctx: *Context, alpha: f64) void {
-    const screen_size = seizer.getScreenSize();
-
-    gl.clearColor(0.0, 0.0, 0.0, 1.0);
-    gl.clear(gl.COLOR_BUFFER_BIT);
-    gl.viewport(0, 0, screen_size.x, screen_size.y);
-
-    ctx.flat.setSize(screen_size);
-
-    const menu_size = menu.getMinSize(ctx);
-    menu.render(ctx, alpha, menu_size);
-
-    ctx.flat.flush();
-}
-
 // ====== Setup screen =======
 
-pub const SetupScreen: Screen = .{
-    .init = setup_init,
-    .deinit = setup_deinit,
-    .update = setup_update,
-    .event = setup_event,
-    .render = setup_render,
-};
+setup_menu: Menu,
+level_label: usize,
 
-var setup_menu: Menu = undefined;
-var level_label: usize = undefined;
-
-fn setup_init(ctx: *Context) void {
+fn setup_init(ctx: *Context) @This() {
     const level_txt = std.fmt.allocPrint(ctx.allocator, "Level: {}", .{ctx.setup.level}) catch @panic("Couldn't format label");
-
-    setup_menu = Menu.init(ctx, "Setup") catch @panic("Couldn't set up menu");
+    var setup_menu = Menu.init(ctx, "Setup") catch @panic("Couldn't set up menu");
+    var this = @This(){
+        .setup_menu = setup_menu,
+        .level_label = setup_menu.add_menu_item(.{
+            .label = level_txt,
+            .ondeinit = setup_spin_deinit,
+            ._type = .{ .spinner = .{ .increase = setup_spin_up, .decrease = setup_spin_down } },
+        }) catch @panic("Couldn't set up menu"),
+    };
     _ = setup_menu.add_menu_item(.{ .label = "Start Game", ._type = .{ .action = setup_action_start_game } }) catch @panic("Couldn't set up menu");
-    level_label = setup_menu.add_menu_item(.{
-        .label = level_txt,
-        .ondeinit = setup_spin_deinit,
-        ._type = .{ .spinner = .{ .increase = setup_spin_up, .decrease = setup_spin_down } },
-    }) catch @panic("Couldn't set up menu");
+    return this;
 }
 
-fn setup_update(ctx: *Context, current_time: f64, delta: f64) void {
-    _ = ctx;
+fn setup_update(this: *@This(), current_time: f64, delta: f64) void {
     _ = current_time;
     _ = delta;
     const screenSize = seizer.getScreenSize();
-    setup_menu.stage.layout(.{ 0, 0, screenSize.x, screenSize.y });
+    this.setup_menu.stage.layout(.{ 0, 0, screenSize.x, screenSize.y });
 }
 
-fn setup_deinit(ctx: *Context) void {
-    setup_menu.deinit(ctx);
+fn setup_deinit(this: *@This()) void {
+    this.setup_menu.deinit(this.ctx);
 }
 
 fn setup_action_start_game(menu_ptr: *Menu, _: ui.EventData) void {
@@ -156,7 +82,7 @@ fn setup_spin_deinit(menu_ptr: *Menu) void {
     }
 }
 
-fn setup_event(ctx: *Context, evt: seizer.event.Event) void {
+fn setup_event(this: *@This(), evt: seizer.event.Event) void {
     setup_menu.event(ctx, evt);
     switch (evt) {
         .KeyDown => |e| switch (e.scancode) {
@@ -172,7 +98,8 @@ fn setup_event(ctx: *Context, evt: seizer.event.Event) void {
     }
 }
 
-fn setup_render(ctx: *Context, alpha: f64) void {
+fn setup_render(this: *@This(), alpha: f64) void {
+    const ctx = this.ctx;
     const screen_size = seizer.getScreenSize();
     const screen_size_f = screen_size.intToFloat(f32);
 

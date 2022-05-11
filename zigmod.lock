@@ -1,6 +1,6 @@
 2
-git https://github.com/leroycep/seizer commit-d5ecc84ea4a21c76af6144ec94d4e657b92beb87
-git https://github.com/leroycep/zigmath.git commit-07cec7a7967f8b7de0b2830d8d91070f3385a712
+git https://github.com/leroycep/seizer commit-1c2297638e155c352894c6c00709a32c999d6691
+git https://github.com/leroycep/zigmath.git commit-2f404f0af1f07f0cbdd72da58b5941aa374dfc12
 git https://github.com/leecannon/zigimg.git commit-1f4ff13c7425f085d44ae2130114ae9f0fc42f9e
 git https://github.com/leroycep/crossdb commit-e9f8dd5a6cef8decfe7125bfecae4e0f3c859406
 git https://github.com/stiletto/lmdb-zig commit-6f7f839e9e5791c1ec5cd073f420d569404a8777

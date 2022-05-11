@@ -4,12 +4,15 @@ const Texture = seizer.Texture;
 const SpriteBatch = seizer.batch.SpriteBatch;
 const BitmapFont = seizer.font.Bitmap;
 const ScoreEntry = @import("score.zig").ScoreEntry;
-const Setup = @import("game.zig").Setup;
 const audio = seizer.audio;
 const crossdb = @import("crossdb");
 const encode = @import("proto_structs").encode;
 const chrono = @import("chrono");
 const Tilemap = @import("util.zig").Tilemap;
+
+pub const Setup = struct {
+    level: u8 = 0,
+};
 
 pub const Context = struct {
     flat: SpriteBatch,
@@ -18,7 +21,7 @@ pub const Context = struct {
     tilemap: Tilemap,
     allocator: std.mem.Allocator,
     rand: std.rand.Random,
-    screens: std.ArrayList(Screen),
+    scene: @import("main.zig").SceneManager,
     scores: std.ArrayList(ScoreEntry),
     setup: Setup,
     audioEngine: *audio.Engine,
@@ -57,77 +60,4 @@ pub const Context = struct {
 
         txn.commit() catch @panic("Failed to add score");
     }
-
-    pub fn current_screen(self: *@This()) Screen {
-        return if (self.screens.items.len > 0) self.screens.items[self.screens.items.len - 1] else NullScreen;
-    }
-
-    pub fn switch_screen(self: *@This(), screen: Screen) !void {
-        self.pop_screen();
-        try self.push_screen(screen);
-    }
-
-    pub fn push_screen(self: *@This(), screen: Screen) !void {
-        try self.screens.append(screen);
-        screen.init(self);
-    }
-
-    pub fn pop_screen(self: *@This()) void {
-        if (self.screens.items.len > 0) {
-            var screen = self.screens.pop();
-            screen.deinit(self);
-        }
-    }
-
-    pub fn set_screen(self: *@This(), new_screen: Screen) !void {
-        for (self.screens.items) |screen| {
-            screen.deinit(self);
-        }
-        self.screens.shrinkRetainingCapacity(0);
-        try self.push_screen(new_screen);
-    }
 };
-
-pub const Screen = struct {
-    init: fn (ctx: *Context) void = init,
-    deinit: fn (ctx: *Context) void = deinit,
-    event: fn (ctx: *Context, evt: seizer.event.Event) void = event,
-    update: fn (ctx: *Context, current_time: f64, delta: f64) void = update,
-    render: fn (ctx: *Context, alpha: f64) void = render,
-};
-
-pub const Transition = union(enum) {
-    Switch: Screen,
-    Push: Screen,
-    Pop,
-};
-
-pub const NullScreen: Screen = .{
-    .init = init,
-    .deinit = deinit,
-    .event = event,
-    .update = update,
-    .render = render,
-};
-fn init(ctx: *Context) void {
-    _ = ctx;
-}
-fn deinit(ctx: *Context) void {
-    _ = ctx;
-}
-fn event(ctx: *Context, evt: seizer.event.Event) void {
-    _ = ctx;
-    switch (evt) {
-        .Quit => seizer.quit(),
-        else => {},
-    }
-}
-fn update(ctx: *Context, current_time: f64, delta: f64) void {
-    _ = ctx;
-    _ = current_time;
-    _ = delta;
-}
-fn render(ctx: *Context, alpha: f64) void {
-    _ = ctx;
-    _ = alpha;
-}

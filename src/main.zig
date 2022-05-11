@@ -4,14 +4,19 @@ const Texture = seizer.Texture;
 const SpriteBatch = seizer.batch.SpriteBatch;
 const BitmapFont = seizer.font.Bitmap;
 const Context = @import("context.zig").Context;
-const Screen = @import("context.zig").Screen;
-const MainMenuScreen = @import("main_menu.zig").MainMenuScreen;
-const GameScreen = @import("game.zig").GameScreen;
 const ScoreEntry = @import("score.zig").ScoreEntry;
 const audio = seizer.audio;
 const crossdb = @import("crossdb");
 const chrono = @import("chrono");
 const util = @import("util.zig");
+const scene = seizer.scene;
+
+pub const SceneManager = scene.Manager(Context, &[_]type {
+    @import("MainMenu.zig"),
+    // @import("Game.zig"),
+    // @import("ScoreScreen.zig"),
+    // @import("SetupScreen.zig"),
+});
 
 pub usingnamespace seizer.run(.{
     .init = onInit,
@@ -66,7 +71,7 @@ pub fn onInit() !void {
         .font = try await load_font,
         .allocator = allocator,
         .rand = rng.random(),
-        .screens = std.ArrayList(Screen).init(allocator),
+        .scene = try SceneManager.init(allocator, &ctx, .{}),
         .scores = std.ArrayList(ScoreEntry).init(allocator),
         .setup = .{},
         .audioEngine = &audioEngine,
@@ -113,14 +118,11 @@ pub fn onInit() !void {
     audioEngine.connectToOutput(filter1_node);
     audioEngine.connectToOutput(filter2_node);
 
-    try ctx.push_screen(MainMenuScreen);
+    // try ctx.scene.push(.MainMenu);
 }
 
 pub fn onDeinit() void {
-    for (ctx.screens.items) |screen| {
-        screen.deinit(&ctx);
-    }
-    ctx.screens.deinit();
+    ctx.scene.deinit();
     ctx.scores.deinit();
     ctx.font.deinit();
     ctx.flat.deinit();
@@ -139,17 +141,21 @@ pub fn onDeinit() void {
 }
 
 pub fn onEvent(event: seizer.event.Event) !void {
-    ctx.current_screen().event(&ctx, event);
-}
-
-pub fn render(alpha: f64) !void {
-    for (ctx.screens.items) |screen| {
-        screen.render(&ctx, alpha);
+    try ctx.scene.event(event);
+    if (event == .MouseButtonDown) {
+        try ctx.scene.push(.MainMenu);
+    }
+    if (event == .Quit) {
+        seizer.quit();
     }
 }
 
+pub fn render(alpha: f64) !void {
+    try ctx.scene.render(alpha);
+}
+
 pub fn update(current_time: f64, delta: f64) anyerror!void {
-    ctx.current_screen().update(&ctx, current_time, delta);
+    try ctx.scene.update(current_time, delta);
 }
 
 pub fn upgradeDb(db: *crossdb.Database, oldVersion: u32, newVersion: u32) anyerror!void {

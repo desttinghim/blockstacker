@@ -73,10 +73,6 @@ fn shuffled_bag(ctx: *Context) [7]PieceType {
     return tempbag;
 }
 
-pub const Setup = struct {
-    level: u8 = 0,
-};
-
 var grid: Grid = undefined;
 var piece: Piece = undefined;
 var piece_pos: Veci = undefined;
