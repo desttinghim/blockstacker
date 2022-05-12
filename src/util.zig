@@ -4,7 +4,7 @@ const Veci = seizer.math.Vec(2, isize);
 const veci = Veci.init;
 const Vec = seizer.math.Vec(2, usize);
 const vec = Vec.init;
-const geom = @import("geometry.zig");
+const geom = seizer.geometry;
 
 pub fn contains(size: Vec, point: Veci) bool {
     return point.x >= 0 and point.y >= 0 and point.x < size.x and point.y < size.y;

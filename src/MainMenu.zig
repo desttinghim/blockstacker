@@ -7,9 +7,9 @@ const vec2f = Vec2f.init;
 const Vec2 = seizer.math.Vec(2, i32);
 const vec2 = Vec2.init;
 // const GameScreen = @import("game.zig").GameScreen;
+const ScoreScreen = @import("ScoreScreen.zig");
 const Texture = seizer.Texture;
 const Patch = @import("context.zig").Patch;
-const ui = @import("ui/default.zig");
 
 ctx: *Context,
 stage: seizer.ui.Stage,
@@ -54,13 +54,13 @@ pub fn deinit(this: *@This()) void {
 }
 
 pub fn event(this: *@This(), evt: seizer.event.Event) !void {
-    _ = this;
     // this.menu.event(this.ctx, evt);
     if (this.stage.event(evt)) |action| {
         if (action.emit == 1) {
             if (action.node) |node| {
                 if (node.handle == this.btn_start) {
                 } else if (node.handle == this.btn_scores) {
+                    try this.ctx.scene.push(.ScoreScreen);
                 } else if (node.handle == this.btn_quit) {
                     seizer.quit();
                 }
