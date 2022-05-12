@@ -17,7 +17,7 @@ const ui = @import("ui/default.zig");
 ctx: *Context,
 menu: Menu,
 
-fn init(ctx: *Context) !@This() {
+pub fn init(ctx: *Context) !@This() {
     // TODO: Add settings screen for settings that don't affect gameplay
     var this = .{
         .ctx = ctx,
@@ -27,18 +27,22 @@ fn init(ctx: *Context) !@This() {
     _ = this.menu.add_menu_item(.{ .label = "Scores", ._type = .{ .action = action_score } }) catch @panic("Couldn't set up menu");
     _ = this.menu.add_menu_item(.{ .label = "Quit", ._type = .{ .action = action_quit } }) catch @panic("Couldn't set up menu");
 
+    std.log.info("init main menu", .{});
+
     const screen_size = seizer.getScreenSize();
     this.menu.stage.layout(.{ 0, 0, screen_size.x, screen_size.y });
+    return this;
 }
 
 pub fn update(this: *@This(), current_time: f64, delta: f64) !void {
     _ = current_time;
     _ = delta;
+    _ = this;
     const screenSize = seizer.getScreenSize();
     this.menu.stage.layout(.{ 0, 0, screenSize.x, screenSize.y });
 }
 
-fn deinit(this: *@This()) void {
+pub fn deinit(this: *@This()) void {
     this.menu.deinit(this.ctx);
 }
 
@@ -57,6 +61,7 @@ fn action_score(menu_ptr: *Menu, _: ui.EventData) void {
 }
 
 fn event(this: *@This(), evt: seizer.event.Event) void {
+    _ = this;
     this.menu.event(this.ctx, evt);
     if (evt == .Quit) {
         seizer.quit();

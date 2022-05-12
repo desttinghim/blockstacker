@@ -63,11 +63,12 @@ pub fn onInit() !void {
 
     // TODO: Make chrono work cross platform
     //var load_timezone = if (std.builtin.os.tag != .freestanding) async chrono.timezone.TimeZone.loadTZif(&gpa.allocator, "/etc/localtime") else undefined;
+    const sprite_batch = try SpriteBatch.init(gpa.allocator(), seizer.getScreenSize());
 
     ctx = .{
         .tileset_tex = try await load_tileset,
         .tilemap = try await load_tilemap,
-        .flat = try SpriteBatch.init(gpa.allocator(), seizer.getScreenSize()),
+        .flat = sprite_batch,
         .font = try await load_font,
         .allocator = allocator,
         .rand = rng.random(),
@@ -118,7 +119,7 @@ pub fn onInit() !void {
     audioEngine.connectToOutput(filter1_node);
     audioEngine.connectToOutput(filter2_node);
 
-    // try ctx.scene.push(.MainMenu);
+    try ctx.scene.push(.MainMenu);
 }
 
 pub fn onDeinit() void {
@@ -142,9 +143,6 @@ pub fn onDeinit() void {
 
 pub fn onEvent(event: seizer.event.Event) !void {
     try ctx.scene.event(event);
-    if (event == .MouseButtonDown) {
-        try ctx.scene.push(.MainMenu);
-    }
     if (event == .Quit) {
         seizer.quit();
     }
