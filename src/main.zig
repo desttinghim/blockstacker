@@ -4,12 +4,16 @@ const Texture = seizer.Texture;
 const SpriteBatch = seizer.batch.SpriteBatch;
 const BitmapFont = seizer.font.Bitmap;
 const Context = @import("context.zig").Context;
+const Patch = @import("context.zig").Patch;
+const PatchMap = @import("context.zig").PatchMap;
 const ScoreEntry = @import("score.zig").ScoreEntry;
 const audio = seizer.audio;
 const crossdb = @import("crossdb");
 const chrono = @import("chrono");
 const util = @import("util.zig");
 const scene = seizer.scene;
+const NinePatch = seizer.ninepatch.NinePatch;
+const Observer = seizer.ui.Observer;
 
 pub const SceneManager = scene.Manager(Context, &[_]type {
     @import("MainMenu.zig"),
@@ -45,6 +49,7 @@ pub fn onInit() !void {
     var allocator = gpa.allocator();
     try audioEngine.init(allocator);
     var load_tileset = async Texture.initFromFile(allocator, "assets/blocks.png", .{});
+    var load_ui_tileset = async Texture.initFromFile(allocator, "assets/ui.png", .{});
     var load_tilemap = async util.load_tilemap_file(allocator, "assets/blocks.json", 4 * 1024);
     var load_font = async BitmapFont.initFromFile(allocator, "assets/PressStart2P_8.fnt");
     var load_hello_sound = async audioEngine.load(allocator, "assets/slideswitch.wav", 2 * 1024 * 1024);
@@ -64,9 +69,12 @@ pub fn onInit() !void {
     // TODO: Make chrono work cross platform
     //var load_timezone = if (std.builtin.os.tag != .freestanding) async chrono.timezone.TimeZone.loadTZif(&gpa.allocator, "/etc/localtime") else undefined;
     const sprite_batch = try SpriteBatch.init(gpa.allocator(), seizer.getScreenSize());
+    const ui_tex = try await load_tileset;
+    const tileset_tex = try await load_ui_tileset;
 
     ctx = .{
-        .tileset_tex = try await load_tileset,
+        .ui_tex = ui_tex,
+        .tileset_tex = tileset_tex,
         .tilemap = try await load_tilemap,
         .flat = sprite_batch,
         .font = try await load_font,

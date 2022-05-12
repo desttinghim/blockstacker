@@ -1,36 +1,45 @@
 const std = @import("std");
 const Context = @import("context.zig").Context;
 const seizer = @import("seizer");
-const Menu = @import("menu.zig").Menu;
-const MenuItem = @import("menu.zig").MenuItem;
-const MenuAndItem = @import("menu.zig").MenuAndItem;
 const gl = seizer.gl;
 const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
 const Vec2 = seizer.math.Vec(2, i32);
 const vec2 = Vec2.init;
 // const GameScreen = @import("game.zig").GameScreen;
-const NineSlice = @import("nineslice.zig").NineSlice;
 const Texture = seizer.Texture;
+const Patch = @import("context.zig").Patch;
 const ui = @import("ui/default.zig");
 
 ctx: *Context,
-menu: Menu,
+stage: seizer.ui.Stage,
+btn_start: usize = 0,
+btn_scores: usize = 0,
+btn_quit: usize = 0,
 
 pub fn init(ctx: *Context) !@This() {
     // TODO: Add settings screen for settings that don't affect gameplay
-    var this = .{
+    var this = @This(){
         .ctx = ctx,
-        .menu = Menu.init(ctx, "BlockStacker") catch @panic("menu"),
+        .stage = try seizer.ui.Stage.init(ctx.allocator, &ctx.font, &ctx.flat, &Context.transitions),
     };
-    _ = this.menu.add_menu_item(.{ .label = "Start Game", ._type = .{ .action = action_setup_game } }) catch @panic("Couldn't set up menu");
-    _ = this.menu.add_menu_item(.{ .label = "Scores", ._type = .{ .action = action_score } }) catch @panic("Couldn't set up menu");
-    _ = this.menu.add_menu_item(.{ .label = "Quit", ._type = .{ .action = action_quit } }) catch @panic("Couldn't set up menu");
+    this.stage.painter.scale = 2;
+    try Patch.addStyles(&this.stage, this.ctx.tileset_tex);
 
-    std.log.info("init main menu", .{});
+    const namelbl = try this.stage.store.new(.{ .Bytes = "BlockStacker" });
+    const startlbl = try this.stage.store.new(.{ .Bytes = "Start Game" });
+    const scorelbl = try this.stage.store.new(.{ .Bytes = "Scores" });
+    const quitlbl = try this.stage.store.new(.{ .Bytes = "Quit" });
 
-    const screen_size = seizer.getScreenSize();
-    this.menu.stage.layout(.{ 0, 0, screen_size.x, screen_size.y });
+    const center = try this.stage.layout.insert(null, Patch.frame(.None).container(.Center));
+    const frame = try this.stage.layout.insert(center, Patch.frame(.Frame).container(.VList));
+    _ = try this.stage.layout.insert(frame, Patch.frame(.Nameplate).dataValue(namelbl));
+    this.btn_start = try this.stage.layout.insert(frame, Patch.frame(.Keyrest).dataValue(startlbl));
+    this.btn_scores = try this.stage.layout.insert(frame, Patch.frame(.Keyrest).dataValue(scorelbl));
+    this.btn_quit = try this.stage.layout.insert(frame, Patch.frame(.Keyrest).dataValue(quitlbl));
+
+    this.stage.sizeAll();
+
     return this;
 }
 
@@ -38,37 +47,33 @@ pub fn update(this: *@This(), current_time: f64, delta: f64) !void {
     _ = current_time;
     _ = delta;
     _ = this;
-    const screenSize = seizer.getScreenSize();
-    this.menu.stage.layout(.{ 0, 0, screenSize.x, screenSize.y });
 }
 
 pub fn deinit(this: *@This()) void {
-    this.menu.deinit(this.ctx);
+    this.stage.deinit();
 }
 
-fn action_setup_game(menu_ptr: *Menu, _: ui.EventData) void {
-    _ = menu_ptr;
-    // menu_ptr.ctx.scene.push(SetupScreen) catch @panic("Switching screen somehow caused allocation");
-}
-
-fn action_quit(_: *Menu, _: ui.EventData) void {
-    seizer.quit();
-}
-
-fn action_score(menu_ptr: *Menu, _: ui.EventData) void {
-    _ = menu_ptr;
-    // menu_ptr.ctx.push_screen(ScoreScreen) catch @panic("Switching screen somehow caused allocation");
-}
-
-fn event(this: *@This(), evt: seizer.event.Event) void {
+pub fn event(this: *@This(), evt: seizer.event.Event) !void {
     _ = this;
-    this.menu.event(this.ctx, evt);
+    // this.menu.event(this.ctx, evt);
+    if (this.stage.event(evt)) |action| {
+        if (action.emit == 1) {
+            if (action.node) |node| {
+                if (node.handle == this.btn_start) {
+                } else if (node.handle == this.btn_scores) {
+                } else if (node.handle == this.btn_quit) {
+                    seizer.quit();
+                }
+            }
+        }
+    }
     if (evt == .Quit) {
         seizer.quit();
     }
 }
 
 pub fn render(this: *@This(), alpha: f64) !void {
+    _ = alpha;
     const screen_size = seizer.getScreenSize();
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
@@ -77,9 +82,7 @@ pub fn render(this: *@This(), alpha: f64) !void {
 
     this.ctx.flat.setSize(screen_size);
 
-    const menu_size = this.menu.getMinSize(this.ctx);
-    this.menu.render(this.ctx, alpha, menu_size);
+    this.stage.paintAll(.{ 0, 0, screen_size.x, screen_size.y });
 
     this.ctx.flat.flush();
 }
-
