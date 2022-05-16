@@ -18,6 +18,7 @@ const Observer = seizer.ui.Observer;
 pub const SceneManager = scene.Manager(Context, &[_]type {
     @import("MainMenu.zig"),
     @import("Game.zig"),
+    @import("GameOver.zig"),
     @import("ScoreScreen.zig"),
     @import("SetupScreen.zig"),
 });
@@ -69,12 +70,12 @@ pub fn onInit() !void {
     // TODO: Make chrono work cross platform
     //var load_timezone = if (std.builtin.os.tag != .freestanding) async chrono.timezone.TimeZone.loadTZif(&gpa.allocator, "/etc/localtime") else undefined;
     const sprite_batch = try SpriteBatch.init(gpa.allocator(), seizer.getScreenSize());
-    const ui_tex = try await load_tileset;
-    const tileset_tex = try await load_ui_tileset;
+    const ui_tex = try await load_ui_tileset;
+    const tileset_tex = try await load_tileset;
 
     ctx = .{
-        .ui_tex = ui_tex,
         .tileset_tex = tileset_tex,
+        .ui_tex = ui_tex,
         .tilemap = try await load_tilemap,
         .flat = sprite_batch,
         .font = try await load_font,

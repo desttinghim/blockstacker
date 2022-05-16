@@ -27,7 +27,7 @@ pub fn init(ctx: *Context) !@This() {
         .level_int = undefined,
     };
     this.stage.painter.scale = 2;
-    try Patch.addStyles(&this.stage, this.ctx.tileset_tex);
+    try Patch.addStyles(&this.stage, this.ctx.ui_tex);
 
     const namelbl = try this.stage.store.new(.{ .Bytes = "Setup" });
     const startlbl = try this.stage.store.new(.{ .Bytes = "Start Game" });
@@ -74,7 +74,7 @@ pub fn event(this: *@This(), evt: seizer.event.Event) !void {
                     var level = this.stage.store.get(this.level_int);
                     this.ctx.setup.level = @intCast(u8, @truncate(i8, level.Int));
                     // TODO: Load game
-                    try this.ctx.scene.push(.Game);
+                    try this.ctx.scene.replace(.Game);
                 } else if (node.handle == this.btn_inc) {
                     var level = this.stage.store.get(this.level_int);
                     if (level.Int < 9) {

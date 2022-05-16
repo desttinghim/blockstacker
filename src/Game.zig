@@ -25,14 +25,6 @@ const Context = @import("context.zig").Context;
 const ScoreEntry = @import("score.zig").ScoreEntry;
 const geom = seizer.geometry;
 
-pub const GameScreen = .{
-    .init = init,
-    .deinit = deinit,
-    .event = event,
-    .update = update,
-    .render = render,
-};
-
 const InputState = enum {
     JustPressed,
     Pressed,
@@ -297,14 +289,13 @@ pub fn update(this: *@This(), current_time: f64, delta: f64) !void {
 
         this.can_hold = true;
 
-        var lines = this.grid.clear_rows() catch {
-            fail_to_null(ctx);
-            return;
-        };
+        var lines = try this.grid.clear_rows();
         // Checks to see if the new piece collides with the grid.
         // If it is, then the game is over!
         if (this.piece.collides_with(this.piece_pos, &this.grid)) {
-            // ctx.push_screen(GameOverScreen) catch @panic("Could not push screen");
+            this.score.timestamp = @divTrunc(seizer.now(), 1000);
+            try this.ctx.add_score(this.score);
+            try ctx.scene.replace(.GameOver);
         }
 
         this.score.rowsCleared += lines;

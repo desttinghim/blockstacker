@@ -24,7 +24,7 @@ pub fn init(ctx: *Context) !@This() {
         .stage = try seizer.ui.Stage.init(ctx.allocator, &ctx.font, &ctx.flat, &Context.transitions),
     };
     this.stage.painter.scale = 2;
-    try Patch.addStyles(&this.stage, this.ctx.tileset_tex);
+    try Patch.addStyles(&this.stage, this.ctx.ui_tex);
 
     const namelbl = try this.stage.store.new(.{ .Bytes = "BlockStacker" });
     const startlbl = try this.stage.store.new(.{ .Bytes = "Start Game" });
