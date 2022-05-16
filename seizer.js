@@ -26,8 +26,9 @@ function idpromise_resolve(id, data) {
     delete idpromise_promises[id];
 }
 
+var getEnv = getPlatformEnv;
 // Platform ENV
-export default function getPlatformEnv(canvas_element, getInstance) {
+function getPlatformEnv(canvas_element, getInstance) {
     const getMemory = () => getInstance().exports.memory;
     const utf8decoder = new TextDecoder();
     const readCharStr = (ptr, len) =>
@@ -68,6 +69,12 @@ export default function getPlatformEnv(canvas_element, getInstance) {
                 delta = maxDelta; // Try to avoid spiral of death when lag hits
             }
             prevTime = currentTime;
+
+            if (canvas_element.width != canvas_element.clientWidth || canvas_element.height != canvas_element.clientHeight) {
+                canvas_element.width = canvas_element.clientWidth;
+                canvas_element.height = canvas_element.clientHeight;
+                instance.exports.onResize();
+            }
 
             accumulator += delta;
 
@@ -181,6 +188,25 @@ export default function getPlatformEnv(canvas_element, getInstance) {
             }
             const [zigKey, zigScancode] = keyEventToKeyScancode(ev);
             instance.exports.onKeyUp(zigKey, zigScancode);
+        });
+
+        document.addEventListener("mousemove", (ev) => {
+            var rect = ev.target.getBoundingClientRect();
+            instance.exports.onMouseMove(ev.clientX - rect.left, ev.clientY - rect.top, ev.movementX, ev.movementY, ev.buttons);
+        });
+
+        document.addEventListener("mousedown", (ev) => {
+            var rect = ev.target.getBoundingClientRect();
+            instance.exports.onMouseButton(ev.clientX - rect.left, ev.clientY - rect.top, 1, ev.button);
+        });
+
+        document.addEventListener("mouseup", (ev) => {
+            var rect = ev.target.getBoundingClientRect();
+            instance.exports.onMouseButton(ev.clientX - rect.left, ev.clientY - rect.top, 0, ev.button);
+        });
+
+        document.addEventListener("wheel", (ev) => {
+            instance.exports.onMouseWheel(ev.deltaX, ev.deltaY);
         });
     };
 
@@ -552,10 +578,10 @@ export default function getPlatformEnv(canvas_element, getInstance) {
             const data =
                 data_ptr != 0
                     ? new Uint8Array(
-                          getMemory().buffer,
-                          data_ptr,
-                          width * height * pixel_size
-                      )
+                        getMemory().buffer,
+                        data_ptr,
+                        width * height * pixel_size
+                    )
                     : null;
 
             gl.texImage2D(
