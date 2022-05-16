@@ -54,14 +54,13 @@ pub fn deinit(this: *@This()) void {
 }
 
 pub fn event(this: *@This(), evt: seizer.event.Event) !void {
-    // this.menu.event(this.ctx, evt);
     if (this.stage.event(evt)) |action| {
         if (action.emit == 1) {
             if (action.node) |node| {
                 if (node.handle == this.btn_start) {
-                    try this.ctx.scene.push(.SetupScreen);
+                    return this.ctx.scene.push(.SetupScreen);
                 } else if (node.handle == this.btn_scores) {
-                    try this.ctx.scene.push(.ScoreScreen);
+                    return this.ctx.scene.push(.ScoreScreen);
                 } else if (node.handle == this.btn_quit) {
                     seizer.quit();
                 }

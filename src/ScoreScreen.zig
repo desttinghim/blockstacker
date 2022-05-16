@@ -1,54 +1,162 @@
 const std = @import("std");
 const Screen = @import("context.zig").Screen;
 const Context = @import("context.zig").Context;
+const Patch = @import("context.zig").Patch;
 const seizer = @import("seizer");
-// const Menu = @import("menu.zig").Menu;
-// const MenuItem = @import("menu.zig").MenuItem;
 const gl = seizer.gl;
 const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
-// const GameScreen = @import("game.zig").GameScreen;
 const ScoreEntry = @import("./score.zig").ScoreEntry;
 const Decoder = @import("proto_structs").Decoder;
 const chrono = @import("chrono");
 
 ctx: *Context,
+stage: seizer.ui.Stage,
 scores_list: std.ArrayList(ScoreEntry),
 scores_done_loading: bool = false,
+scores_done_displaying: bool = false,
+score_container: usize = 0,
+score_list: usize = 0,
+btn_back: usize = 0,
+btn_prev: usize = 0,
+btn_next: usize = 0,
 
 pub fn init(ctx: *Context) !@This() {
-    var this = @This() {
+    var this = @This(){
         .ctx = ctx,
         .scores_list = std.ArrayList(ScoreEntry).init(ctx.allocator),
-        .scores_done_loading = false,
+        .stage = try seizer.ui.Stage.init(ctx.allocator, &ctx.font, &ctx.flat, &Context.transitions),
     };
-    try seizer.execute(ctx.allocator, load_scores, .{ &this });
+    this.stage.painter.scale = 2;
+    try Patch.addStyles(&this.stage, this.ctx.ui_tex);
+
+    const namelbl = try this.stage.store.new(.{ .Bytes = "Scores" });
+    const backlbl = try this.stage.store.new(.{ .Bytes = "Back" });
+    const prevlbl = try this.stage.store.new(.{ .Bytes = "Prev." });
+    const nextlbl = try this.stage.store.new(.{ .Bytes = "Next" });
+    const loadlbl = try this.stage.store.new(.{ .Bytes = "Loading..." });
+
+    const center = try this.stage.layout.insert(null, Patch.frame(.None).container(.Center));
+    const frame = try this.stage.layout.insert(center, Patch.frame(.Frame).container(.VList));
+    _ = try this.stage.layout.insert(frame, Patch.frame(.Nameplate).dataValue(namelbl));
+    // Buttons "Toolbar"
+    const hlist = try this.stage.layout.insert(frame, Patch.frame(.None).container(.HDiv));
+    this.btn_back = try this.stage.layout.insert(hlist, Patch.frame(.Keyrest).dataValue(backlbl));
+    this.btn_prev = try this.stage.layout.insert(hlist, Patch.frame(.Keyrest).dataValue(prevlbl));
+    this.btn_next = try this.stage.layout.insert(hlist, Patch.frame(.Keyrest).dataValue(nextlbl));
+
+    this.score_container = try this.stage.layout.insert(frame, Patch.frame(.Label).container(.Center));
+    this.score_list = try this.stage.layout.insert(this.score_container, Patch.frame(.None).dataValue(loadlbl));
+
+    this.stage.sizeAll();
+
+    try seizer.execute(ctx.allocator, load_scores, .{&this});
+
     return this;
 }
 
 pub fn deinit(this: *@This()) void {
+    this.stage.deinit();
     this.scores_list.deinit();
-    // this.stage.deinit();
+}
+
+pub fn display_scores(this: *@This(), begin: usize, end: usize) !void {
+    this.stage.layout.remove(this.score_list);
+    const CHAR_SIZE = 8;
+    const CHAR_COUNT = 8;
+    const COL_COUNT = 6;
+    const SCALE = @floatToInt(i32, this.stage.painter.scale);
+    this.score_list = try this.stage.layout.insert(this.score_container, Patch.frame(.None).container(.VList).minSize(.{CHAR_SIZE * CHAR_COUNT * COL_COUNT * SCALE}));
+    {
+        const header_row = try this.stage.layout.insert(this.score_list, Patch.frame(.None).container(.HDiv));
+        const date = try this.stage.store.new(.{ .Bytes = "Date" });
+        _ = try this.stage.layout.insert(header_row, Patch.frame(.None).dataValue(date));
+        const time = try this.stage.store.new(.{ .Bytes = "Time" });
+        _ = try this.stage.layout.insert(header_row, Patch.frame(.None).dataValue(time));
+        const score = try this.stage.store.new(.{ .Bytes = "Score" });
+        _ = try this.stage.layout.insert(header_row, Patch.frame(.None).dataValue(score));
+        const start_level = try this.stage.store.new(.{ .Bytes = "Level" });
+        _ = try this.stage.layout.insert(header_row, Patch.frame(.None).dataValue(start_level));
+        const rows_cleared = try this.stage.store.new(.{ .Bytes = "Rows" });
+        _ = try this.stage.layout.insert(header_row, Patch.frame(.None).dataValue(rows_cleared));
+    }
+    var i = begin;
+    while (i < end) : (i += 1) {
+        const entry = this.scores_list.items[i];
+        const entry_row = try this.stage.layout.insert(this.score_list, Patch.frame(.None).container(.HDiv));
+        var buf: [50]u8 = undefined;
+        {
+            const naivedt = chrono.datetime.NaiveDateTime.from_timestamp(entry.timestamp, 0) catch @panic("chrono");
+            const dt = chrono.datetime.DateTime.utc(naivedt, this.ctx.timezone);
+            const naive_dt = dt.toNaiveDateTime() catch @panic("chrono2: electric boogaloo");
+            const dt_fmt = naive_dt.formatted("%Y-%m-%d");
+            const text = std.fmt.bufPrint(&buf, "{}", .{dt_fmt}) catch continue;
+            const ref = try this.stage.store.new(.{ .Bytes = text });
+            _ = try this.stage.layout.insert(entry_row, Patch.frame(.None).dataValue(ref));
+        }
+        {
+            const minutes = @floor(entry.playTime / std.time.s_per_min);
+            const seconds = @floor(entry.playTime - minutes * std.time.s_per_min);
+            const text = std.fmt.bufPrint(&buf, "{d}:{d:0>2}", .{ minutes, seconds }) catch continue;
+            const ref = try this.stage.store.new(.{ .Bytes = text });
+            _ = try this.stage.layout.insert(entry_row, Patch.frame(.None).dataValue(ref));
+        }
+        {
+            const ref = try this.stage.store.new(.{ .Int = @intCast(i32, @truncate(u32, entry.score)) });
+            _ = try this.stage.layout.insert(entry_row, Patch.frame(.None).dataValue(ref));
+        }
+        {
+            const ref = try this.stage.store.new(.{ .Int = entry.startingLevel });
+            _ = try this.stage.layout.insert(entry_row, Patch.frame(.None).dataValue(ref));
+        }
+        {
+            const ref = try this.stage.store.new(.{ .Int = @intCast(i32, entry.rowsCleared) });
+            _ = try this.stage.layout.insert(entry_row, Patch.frame(.None).dataValue(ref));
+        }
+    }
+
+    this.stage.sizeAll();
+}
+
+pub fn update(this: *@This(), current_time: f64, delta: f64) !void {
+    _ = current_time;
+    _ = delta;
+    if (this.scores_done_loading and !this.scores_done_displaying) {
+        try this.display_scores(0, this.scores_list.items.len);
+        this.scores_done_displaying = true;
+    }
 }
 
 pub fn event(this: *@This(), evt: seizer.event.Event) !void {
+    if (this.stage.event(evt)) |action| {
+        if (action.emit == 1) {
+            if (action.node) |node| {
+                if (node.handle == this.btn_back) {
+                    return this.ctx.scene.pop();
+                } else if (node.handle == this.btn_prev) {
+                    // TODO: paginate score info
+                } else if (node.handle == this.btn_next) {
+                    // TODO: paginate score info
+                }
+            }
+        }
+    }
     switch (evt) {
         .KeyDown => |e| switch (e.scancode) {
-            .X, .ESCAPE => this.ctx.scene.pop(),
+            .X, .ESCAPE => return this.ctx.scene.pop(),
             else => {},
         },
         .ControllerButtonDown => |cbutton| switch (cbutton.button) {
-            .START, .B => this.ctx.scene.pop(),
+            .START, .B => return this.ctx.scene.pop(),
             else => {},
         },
-        .Quit => seizer.quit(),
         else => {},
     }
 }
 
 pub fn render(this: *@This(), _: f64) !void {
     const screen_size = seizer.getScreenSize();
-    const screen_size_f = screen_size.intToFloat(f32);
+    // const screen_size_f = screen_size.intToFloat(f32);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -56,39 +164,41 @@ pub fn render(this: *@This(), _: f64) !void {
 
     this.ctx.flat.setSize(screen_size);
 
-    if (this.scores_done_loading) {
-        var y: f32 = (screen_size_f.y - this.ctx.font.lineHeight * @intToFloat(f32, this.scores_list.items.len)) / 2;
-        for (this.scores_list.items) |entry| {
-            var buf: [50]u8 = undefined;
-            {
-                const naivedt = chrono.datetime.NaiveDateTime.from_timestamp(entry.timestamp, 0) catch @panic("chrono");
-                const dt = chrono.datetime.DateTime.utc(naivedt, this.ctx.timezone);
-                const naive_dt = dt.toNaiveDateTime() catch @panic("chrono2: electric boogaloo");
-                const dt_fmt = naive_dt.formatted("%Y-%m-%d");
-                const text = std.fmt.bufPrint(&buf, "{}", .{dt_fmt}) catch continue;
-                this.ctx.font.drawText(&this.ctx.flat, text, vec2f(screen_size_f.x * 1 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
-            }
-            {
-                const minutes = @floor(entry.playTime / std.time.s_per_min);
-                const seconds = @floor(entry.playTime - minutes * std.time.s_per_min);
-                const text = std.fmt.bufPrint(&buf, "{d}:{d:0>2}", .{ minutes, seconds }) catch continue;
-                this.ctx.font.drawText(&this.ctx.flat, text, vec2f(screen_size_f.x * 2 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
-            }
-            {
-                const text = std.fmt.bufPrint(&buf, "{}", .{entry.score}) catch continue;
-                this.ctx.font.drawText(&this.ctx.flat, text, vec2f(screen_size_f.x * 3 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
-            }
-            {
-                const text = std.fmt.bufPrint(&buf, "{}", .{entry.startingLevel}) catch continue;
-                this.ctx.font.drawText(&this.ctx.flat, text, vec2f(screen_size_f.x * 4 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
-            }
-            {
-                const text = std.fmt.bufPrint(&buf, "{}", .{entry.rowsCleared}) catch continue;
-                this.ctx.font.drawText(&this.ctx.flat, text, vec2f(screen_size_f.x * 5 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
-            }
-            y += this.ctx.font.lineHeight;
-        }
-    }
+    this.stage.paintAll(.{ 0, 0, screen_size.x, screen_size.y });
+
+    // if (this.scores_done_loading) {
+    //     var y: f32 = (screen_size_f.y - this.ctx.font.lineHeight * @intToFloat(f32, this.scores_list.items.len)) / 2;
+    //     for (this.scores_list.items) |entry| {
+    //         var buf: [50]u8 = undefined;
+    //         {
+    //             const naivedt = chrono.datetime.NaiveDateTime.from_timestamp(entry.timestamp, 0) catch @panic("chrono");
+    //             const dt = chrono.datetime.DateTime.utc(naivedt, this.ctx.timezone);
+    //             const naive_dt = dt.toNaiveDateTime() catch @panic("chrono2: electric boogaloo");
+    //             const dt_fmt = naive_dt.formatted("%Y-%m-%d");
+    //             const text = std.fmt.bufPrint(&buf, "{}", .{dt_fmt}) catch continue;
+    //             this.ctx.font.drawText(&this.ctx.flat, text, vec2f(screen_size_f.x * 1 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
+    //         }
+    //         {
+    //             const minutes = @floor(entry.playTime / std.time.s_per_min);
+    //             const seconds = @floor(entry.playTime - minutes * std.time.s_per_min);
+    //             const text = std.fmt.bufPrint(&buf, "{d}:{d:0>2}", .{ minutes, seconds }) catch continue;
+    //             this.ctx.font.drawText(&this.ctx.flat, text, vec2f(screen_size_f.x * 2 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
+    //         }
+    //         {
+    //             const text = std.fmt.bufPrint(&buf, "{}", .{entry.score}) catch continue;
+    //             this.ctx.font.drawText(&this.ctx.flat, text, vec2f(screen_size_f.x * 3 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
+    //         }
+    //         {
+    //             const text = std.fmt.bufPrint(&buf, "{}", .{entry.startingLevel}) catch continue;
+    //             this.ctx.font.drawText(&this.ctx.flat, text, vec2f(screen_size_f.x * 4 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
+    //         }
+    //         {
+    //             const text = std.fmt.bufPrint(&buf, "{}", .{entry.rowsCleared}) catch continue;
+    //             this.ctx.font.drawText(&this.ctx.flat, text, vec2f(screen_size_f.x * 5 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
+    //         }
+    //         y += this.ctx.font.lineHeight;
+    //     }
+    // }
 
     this.ctx.flat.flush();
 }
@@ -102,10 +212,11 @@ fn load_scores(this: *@This()) void {
 
     var cursor = store.cursor(.{}) catch unreachable;
     defer cursor.deinit();
-    while (cursor.next() catch unreachable) |entry| {
-        var arena = std.heap.ArenaAllocator.init(this.ctx.allocator);
-        defer arena.deinit();
 
+    var arena = std.heap.ArenaAllocator.init(this.ctx.allocator);
+    defer arena.deinit();
+
+    while (cursor.next() catch unreachable) |entry| {
         const score_decoder = Decoder(ScoreEntry).fromBytes(entry.val) catch continue;
         const score = score_decoder.decode(arena.allocator()) catch continue;
 

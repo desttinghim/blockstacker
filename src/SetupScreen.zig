@@ -75,6 +75,7 @@ pub fn event(this: *@This(), evt: seizer.event.Event) !void {
                     this.ctx.setup.level = @intCast(u8, @truncate(i8, level.Int));
                     // TODO: Load game
                     try this.ctx.scene.replace(.Game);
+                    return;
                 } else if (node.handle == this.btn_inc) {
                     var level = this.stage.store.get(this.level_int);
                     if (level.Int < 9) {
@@ -89,6 +90,7 @@ pub fn event(this: *@This(), evt: seizer.event.Event) !void {
                     }
                 } else if (node.handle == this.btn_back) {
                     this.ctx.scene.pop();
+                    return;
                 }
             }
         }
