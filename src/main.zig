@@ -17,9 +17,9 @@ const Observer = seizer.ui.Observer;
 
 pub const SceneManager = scene.Manager(Context, &[_]type {
     @import("MainMenu.zig"),
-    // @import("Game.zig"),
+    @import("Game.zig"),
     @import("ScoreScreen.zig"),
-    // @import("SetupScreen.zig"),
+    @import("SetupScreen.zig"),
 });
 
 pub usingnamespace seizer.run(.{

@@ -1,119 +1,122 @@
 const std = @import("std");
 const Context = @import("context.zig").Context;
 const seizer = @import("seizer");
-const Menu = @import("menu.zig").Menu;
-const MenuItem = @import("menu.zig").MenuItem;
-const MenuAndItem = @import("menu.zig").MenuAndItem;
 const gl = seizer.gl;
 const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
 const Vec2 = seizer.math.Vec(2, i32);
 const vec2 = Vec2.init;
-const GameScreen = @import("game.zig").GameScreen;
-const ScoreScreen = @import("score_screen.zig").ScoreScreen;
-const NineSlice = @import("nineslice.zig").NineSlice;
+// const GameScreen = @import("game.zig").GameScreen;
 const Texture = seizer.Texture;
-const ui = @import("ui/default.zig");
+const Patch = @import("context.zig").Patch;
 
 // ====== Setup screen =======
 
-setup_menu: Menu,
-level_label: usize,
+ctx: *Context,
+stage: seizer.ui.Stage,
+level_int: seizer.ui.store.Ref,
+btn_start: usize = 0,
+btn_dec: usize = 0,
+btn_inc: usize = 0,
+btn_back: usize = 0,
 
-fn setup_init(ctx: *Context) @This() {
-    const level_txt = std.fmt.allocPrint(ctx.allocator, "Level: {}", .{ctx.setup.level}) catch @panic("Couldn't format label");
-    var setup_menu = Menu.init(ctx, "Setup") catch @panic("Couldn't set up menu");
+pub fn init(ctx: *Context) !@This() {
     var this = @This(){
-        .setup_menu = setup_menu,
-        .level_label = setup_menu.add_menu_item(.{
-            .label = level_txt,
-            .ondeinit = setup_spin_deinit,
-            ._type = .{ .spinner = .{ .increase = setup_spin_up, .decrease = setup_spin_down } },
-        }) catch @panic("Couldn't set up menu"),
+        .ctx = ctx,
+        .stage = try seizer.ui.Stage.init(ctx.allocator, &ctx.font, &ctx.flat, &Context.transitions),
+        .level_int = undefined,
     };
-    _ = setup_menu.add_menu_item(.{ .label = "Start Game", ._type = .{ .action = setup_action_start_game } }) catch @panic("Couldn't set up menu");
+    this.stage.painter.scale = 2;
+    try Patch.addStyles(&this.stage, this.ctx.tileset_tex);
+
+    const namelbl = try this.stage.store.new(.{ .Bytes = "Setup" });
+    const startlbl = try this.stage.store.new(.{ .Bytes = "Start Game" });
+    const increment = try this.stage.store.new(.{ .Bytes = ">" });
+    const decrement = try this.stage.store.new(.{ .Bytes = "<" });
+    const levellbl = try this.stage.store.new(.{ .Bytes = "Level:" });
+    this.level_int = try this.stage.store.new(.{ .Int = this.ctx.setup.level });
+    const backlbl = try this.stage.store.new(.{ .Bytes = "Back" });
+
+    const center = try this.stage.layout.insert(null, Patch.frame(.None).container(.Center));
+    const frame = try this.stage.layout.insert(center, Patch.frame(.Frame).container(.VList));
+    _ = try this.stage.layout.insert(frame, Patch.frame(.Nameplate).dataValue(namelbl));
+    this.btn_start = try this.stage.layout.insert(frame, Patch.frame(.Keyrest).dataValue(startlbl));
+    const spinner = try this.stage.layout.insert(frame, Patch.frame(.None).container(.HList));
+    {
+        this.btn_dec = try this.stage.layout.insert(spinner, Patch.frame(.Keyrest).dataValue(decrement));
+        const label = try this.stage.layout.insert(spinner, Patch.frame(.Label).container(.HList));
+        _ = try this.stage.layout.insert(label, Patch.frame(.None).dataValue(levellbl));
+        _ = try this.stage.layout.insert(label, Patch.frame(.None).dataValue(this.level_int));
+        this.btn_inc = try this.stage.layout.insert(spinner, Patch.frame(.Keyrest).dataValue(increment));
+    }
+    this.btn_back = try this.stage.layout.insert(frame, Patch.frame(.Keyrest).dataValue(backlbl));
+
+    this.stage.sizeAll();
+
     return this;
 }
 
-fn setup_update(this: *@This(), current_time: f64, delta: f64) void {
+pub fn deinit(this: *@This()) void {
+    this.stage.deinit(this.ctx);
+}
+
+pub fn update(this: *@This(), current_time: f64, delta: f64) !void {
+    _ = this;
     _ = current_time;
     _ = delta;
-    const screenSize = seizer.getScreenSize();
-    this.setup_menu.stage.layout(.{ 0, 0, screenSize.x, screenSize.y });
 }
 
-fn setup_deinit(this: *@This()) void {
-    this.setup_menu.deinit(this.ctx);
-}
-
-fn setup_action_start_game(menu_ptr: *Menu, _: ui.EventData) void {
-    menu_ptr.ctx.push_screen(GameScreen) catch @panic("Switching screen somehow caused allocation");
-}
-
-fn setup_spin_up(menu_ptr: *Menu, _: ui.EventData) void {
-    if (menu_ptr.ctx.setup.level < 9) {
-        menu_ptr.ctx.setup.level += 1;
+pub fn event(this: *@This(), evt: seizer.event.Event) !void {
+    if (this.stage.event(evt)) |action| {
+        if (action.emit == 1) {
+            if (action.node) |node| {
+                if (node.handle == this.btn_start) {
+                    var level = this.stage.store.get(this.level_int);
+                    this.ctx.setup.level = @intCast(u8, @truncate(i8, level.Int));
+                    // TODO: Load game
+                    try this.ctx.scene.push(.Game);
+                } else if (node.handle == this.btn_inc) {
+                    var level = this.stage.store.get(this.level_int);
+                    if (level.Int < 9) {
+                        level.Int += 1;
+                        try this.stage.store.set(.Int, this.level_int, level.Int);
+                    }
+                } else if (node.handle == this.btn_dec) {
+                    var level = this.stage.store.get(this.level_int);
+                    if (level.Int > 0) {
+                        level.Int -= 1;
+                        try this.stage.store.set(.Int, this.level_int, level.Int);
+                    }
+                } else if (node.handle == this.btn_back) {
+                    this.ctx.scene.pop();
+                }
+            }
+        }
     }
-    if (menu_ptr.stage.get_node(level_label)) |*node| {
-        if (node.data == null) return;
-        if (node.data.? != .Label) return;
-        menu_ptr.ctx.allocator.free(node.data.?.Label.text);
-        node.data.?.Label.text = std.fmt.allocPrint(menu_ptr.ctx.allocator, "Level: {}", .{menu_ptr.ctx.setup.level}) catch @panic("Couldn't format label");
-        _ = menu_ptr.stage.set_node(node.*);
-    }
-}
-
-fn setup_spin_down(menu_ptr: *Menu, _: ui.EventData) void {
-    menu_ptr.ctx.setup.level -|= 1;
-    if (menu_ptr.stage.get_node(level_label)) |*node| {
-        if (node.data == null) return;
-        if (node.data.? != .Label) return;
-        menu_ptr.ctx.allocator.free(node.data.?.Label.text);
-        node.data.?.Label.text = std.fmt.allocPrint(menu_ptr.ctx.allocator, "Level: {}", .{menu_ptr.ctx.setup.level}) catch @panic("Couldn't format label");
-        _ = menu_ptr.stage.set_node(node.*);
-    }
-}
-
-fn setup_spin_deinit(menu_ptr: *Menu) void {
-    if (menu_ptr.stage.get_node(level_label)) |*node| {
-        if (node.data == null) return;
-        if (node.data.? != .Label) return;
-        menu_ptr.ctx.allocator.free(node.data.?.Label.text);
-    }
-}
-
-fn setup_event(this: *@This(), evt: seizer.event.Event) void {
-    setup_menu.event(ctx, evt);
     switch (evt) {
         .KeyDown => |e| switch (e.scancode) {
-            .X, .ESCAPE => ctx.pop_screen(),
+            .X, .ESCAPE => this.ctx.scene.pop(),
             else => {},
         },
         .ControllerButtonDown => |cbutton| switch (cbutton.button) {
-            .START, .B => ctx.pop_screen(),
+            .START, .B => this.ctx.scene.pop(),
             else => {},
         },
-        .Quit => seizer.quit(),
         else => {},
     }
 }
 
-fn setup_render(this: *@This(), alpha: f64) void {
-    const ctx = this.ctx;
+pub fn render(this: *@This(), alpha: f64) !void {
+    _ = alpha;
     const screen_size = seizer.getScreenSize();
-    const screen_size_f = screen_size.intToFloat(f32);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, screen_size.x, screen_size.y);
 
-    ctx.flat.setSize(screen_size);
+    this.ctx.flat.setSize(screen_size);
 
-    ctx.font.drawText(&ctx.flat, "SETUP", vec2f(screen_size_f.x / 2, 16), .{ .scale = 2, .textAlign = .Center, .textBaseline = .Top });
+    this.stage.paintAll(.{ 0, 0, screen_size.x, screen_size.y });
 
-    const menu_size = setup_menu.getMinSize(ctx);
-    const menu_pos = screen_size_f.subv(menu_size).scaleDiv(2);
-    setup_menu.render(ctx, alpha, menu_pos);
-
-    ctx.flat.flush();
+    this.ctx.flat.flush();
 }

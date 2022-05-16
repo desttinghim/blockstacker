@@ -59,6 +59,7 @@ pub fn event(this: *@This(), evt: seizer.event.Event) !void {
         if (action.emit == 1) {
             if (action.node) |node| {
                 if (node.handle == this.btn_start) {
+                    try this.ctx.scene.push(.SetupScreen);
                 } else if (node.handle == this.btn_scores) {
                     try this.ctx.scene.push(.ScoreScreen);
                 } else if (node.handle == this.btn_quit) {
@@ -66,9 +67,6 @@ pub fn event(this: *@This(), evt: seizer.event.Event) !void {
                 }
             }
         }
-    }
-    if (evt == .Quit) {
-        seizer.quit();
     }
 }
 
