@@ -57,7 +57,7 @@ pub fn init(ctx: *Context) !@This() {
 }
 
 pub fn deinit(this: *@This()) void {
-    this.stage.deinit(this.ctx);
+    this.stage.deinit();
 }
 
 pub fn update(this: *@This(), current_time: f64, delta: f64) !void {

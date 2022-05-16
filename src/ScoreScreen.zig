@@ -26,9 +26,9 @@ pub fn init(ctx: *Context) !@This() {
     return this;
 }
 
-pub fn deinit(this: *@This()) !void {
+pub fn deinit(this: *@This()) void {
     this.scores_list.deinit();
-    this.stage.deinit();
+    // this.stage.deinit();
 }
 
 pub fn event(this: *@This(), evt: seizer.event.Event) !void {

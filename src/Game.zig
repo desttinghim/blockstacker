@@ -140,7 +140,7 @@ pub fn init(ctx: *Context) !@This() {
     return this;
 }
 
-pub fn deinit(this: *@This()) !void {
+pub fn deinit(this: *@This()) void {
     this.ctx.allocator.free(this.score_text);
     this.ctx.allocator.free(this.level_text);
     this.ctx.allocator.free(this.lines_text);
@@ -296,6 +296,7 @@ pub fn update(this: *@This(), current_time: f64, delta: f64) !void {
             this.score.timestamp = @divTrunc(seizer.now(), 1000);
             try this.ctx.add_score(this.score);
             try ctx.scene.replace(.GameOver);
+            return;
         }
 
         this.score.rowsCleared += lines;
