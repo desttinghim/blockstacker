@@ -17,6 +17,10 @@ scores_done_loading: bool = false,
 scores_done_displaying: bool = false,
 score_container: usize = 0,
 score_list: usize = 0,
+page_start: usize = 0,
+page_size: usize = 10,
+page: seizer.ui.store.Ref,
+page_total: seizer.ui.store.Ref,
 btn_back: usize = 0,
 btn_prev: usize = 0,
 btn_next: usize = 0,
@@ -26,6 +30,8 @@ pub fn init(ctx: *Context) !@This() {
         .ctx = ctx,
         .scores_list = std.ArrayList(ScoreEntry).init(ctx.allocator),
         .stage = try seizer.ui.Stage.init(ctx.allocator, &ctx.font, &ctx.flat, &Context.transitions),
+        .page = undefined,
+        .page_total = undefined,
     };
     this.stage.painter.scale = 2;
     try Patch.addStyles(&this.stage, this.ctx.ui_tex);
@@ -35,18 +41,25 @@ pub fn init(ctx: *Context) !@This() {
     const prevlbl = try this.stage.store.new(.{ .Bytes = "Prev." });
     const nextlbl = try this.stage.store.new(.{ .Bytes = "Next" });
     const loadlbl = try this.stage.store.new(.{ .Bytes = "Loading..." });
+    this.page = try this.stage.store.new(.{ .Int = 0});
+    const divider = try this.stage.store.new(.{ .Bytes = "/" });
+    this.page_total = try this.stage.store.new(.{ .Int = 0});
 
     const center = try this.stage.layout.insert(null, Patch.frame(.None).container(.Center));
     const frame = try this.stage.layout.insert(center, Patch.frame(.Frame).container(.VList));
     _ = try this.stage.layout.insert(frame, Patch.frame(.Nameplate).dataValue(namelbl));
     // Buttons "Toolbar"
-    const hlist = try this.stage.layout.insert(frame, Patch.frame(.None).container(.HDiv));
+    const hlist = try this.stage.layout.insert(frame, Patch.frame(.None).container(.HList));
     this.btn_back = try this.stage.layout.insert(hlist, Patch.frame(.Keyrest).dataValue(backlbl));
     this.btn_prev = try this.stage.layout.insert(hlist, Patch.frame(.Keyrest).dataValue(prevlbl));
+    const page_container = try this.stage.layout.insert(hlist, Patch.frame(.Label).container(.HList));
+    _ = try this.stage.layout.insert(page_container, Patch.frame(.None).dataValue(this.page));
+    _ = try this.stage.layout.insert(page_container, Patch.frame(.None).dataValue(divider));
+    _ = try this.stage.layout.insert(page_container, Patch.frame(.None).dataValue(this.page_total));
     this.btn_next = try this.stage.layout.insert(hlist, Patch.frame(.Keyrest).dataValue(nextlbl));
 
-    this.score_container = try this.stage.layout.insert(frame, Patch.frame(.Label).container(.Center));
-    this.score_list = try this.stage.layout.insert(this.score_container, Patch.frame(.None).dataValue(loadlbl));
+    this.score_container = try this.stage.layout.insert(frame, Patch.frame(.None).container(.Center));
+    this.score_list = try this.stage.layout.insert(this.score_container, Patch.frame(.Label).dataValue(loadlbl));
 
     this.stage.sizeAll();
 
@@ -62,57 +75,41 @@ pub fn deinit(this: *@This()) void {
 
 pub fn display_scores(this: *@This(), begin: usize, end: usize) !void {
     this.stage.layout.remove(this.score_list);
-    const CHAR_SIZE = 8;
-    const CHAR_COUNT = 8;
-    const COL_COUNT = 6;
-    const SCALE = @floatToInt(i32, this.stage.painter.scale);
-    this.score_list = try this.stage.layout.insert(this.score_container, Patch.frame(.None).container(.VList).minSize(.{CHAR_SIZE * CHAR_COUNT * COL_COUNT * SCALE}));
+    this.score_list = try this.stage.layout.insert(this.score_container, Patch.frame(.None).container(.VList));
     {
-        const header_row = try this.stage.layout.insert(this.score_list, Patch.frame(.None).container(.HDiv));
-        const date = try this.stage.store.new(.{ .Bytes = "Date" });
-        _ = try this.stage.layout.insert(header_row, Patch.frame(.None).dataValue(date));
-        const time = try this.stage.store.new(.{ .Bytes = "Time" });
-        _ = try this.stage.layout.insert(header_row, Patch.frame(.None).dataValue(time));
-        const score = try this.stage.store.new(.{ .Bytes = "Score" });
-        _ = try this.stage.layout.insert(header_row, Patch.frame(.None).dataValue(score));
-        const start_level = try this.stage.store.new(.{ .Bytes = "Level" });
-        _ = try this.stage.layout.insert(header_row, Patch.frame(.None).dataValue(start_level));
-        const rows_cleared = try this.stage.store.new(.{ .Bytes = "Rows" });
-        _ = try this.stage.layout.insert(header_row, Patch.frame(.None).dataValue(rows_cleared));
+        var buf: [50]u8 = undefined;
+        const text = try std.fmt.bufPrint(&buf, "{s:<12}|{s:^5}|{s:^8}|{s:^3}|{s:^4}", .{ "Date", "Time", "Score", "Lvl", "Rows" });
+        const ref = try this.stage.store.new(.{ .Bytes = text });
+        _ = try this.stage.layout.insert(this.score_list, Patch.frame(.Label).dataValue(ref));
     }
+    const list_box = try this.stage.layout.insert(this.score_list, Patch.frame(.Label).container(.VList));
     var i = begin;
     while (i < end) : (i += 1) {
         const entry = this.scores_list.items[i];
-        const entry_row = try this.stage.layout.insert(this.score_list, Patch.frame(.None).container(.HDiv));
         var buf: [50]u8 = undefined;
-        {
+        var buf_date: [12]u8 = undefined;
+        var buf_time: [5]u8 = undefined;
+        var buf_score: [10]u8 = undefined;
+        var buf_level: [10]u8 = undefined;
+        var buf_rows: [10]u8 = undefined;
+        const date = date: {
             const naivedt = chrono.datetime.NaiveDateTime.from_timestamp(entry.timestamp, 0) catch @panic("chrono");
             const dt = chrono.datetime.DateTime.utc(naivedt, this.ctx.timezone);
             const naive_dt = dt.toNaiveDateTime() catch @panic("chrono2: electric boogaloo");
             const dt_fmt = naive_dt.formatted("%Y-%m-%d");
-            const text = std.fmt.bufPrint(&buf, "{}", .{dt_fmt}) catch continue;
-            const ref = try this.stage.store.new(.{ .Bytes = text });
-            _ = try this.stage.layout.insert(entry_row, Patch.frame(.None).dataValue(ref));
-        }
-        {
+            break :date try std.fmt.bufPrint(&buf_date, "{}", .{dt_fmt});
+        };
+        const time = time: {
             const minutes = @floor(entry.playTime / std.time.s_per_min);
             const seconds = @floor(entry.playTime - minutes * std.time.s_per_min);
-            const text = std.fmt.bufPrint(&buf, "{d}:{d:0>2}", .{ minutes, seconds }) catch continue;
-            const ref = try this.stage.store.new(.{ .Bytes = text });
-            _ = try this.stage.layout.insert(entry_row, Patch.frame(.None).dataValue(ref));
-        }
-        {
-            const ref = try this.stage.store.new(.{ .Int = @intCast(i32, @truncate(u32, entry.score)) });
-            _ = try this.stage.layout.insert(entry_row, Patch.frame(.None).dataValue(ref));
-        }
-        {
-            const ref = try this.stage.store.new(.{ .Int = entry.startingLevel });
-            _ = try this.stage.layout.insert(entry_row, Patch.frame(.None).dataValue(ref));
-        }
-        {
-            const ref = try this.stage.store.new(.{ .Int = @intCast(i32, entry.rowsCleared) });
-            _ = try this.stage.layout.insert(entry_row, Patch.frame(.None).dataValue(ref));
-        }
+            break :time try std.fmt.bufPrint(&buf_time, "{d}:{d:0>2}", .{ minutes, seconds });
+        };
+        const score = try std.fmt.bufPrint(&buf_score, "{}", .{@intCast(i32, @truncate(u32, entry.score))});
+        const level = try std.fmt.bufPrint(&buf_level, "{}", .{entry.startingLevel});
+        const rows = try std.fmt.bufPrint(&buf_rows, "{}", .{entry.rowsCleared});
+        const text = try std.fmt.bufPrint(&buf, "{s:<12}|{s:>5}|{s:>8}|{s:>3}|{s:>4}", .{ date, time, score, level, rows });
+        const ref = try this.stage.store.new(.{ .Bytes = text });
+        _ = try this.stage.layout.insert(list_box, Patch.frame(.None).dataValue(ref));
     }
 
     this.stage.sizeAll();
@@ -122,7 +119,17 @@ pub fn update(this: *@This(), current_time: f64, delta: f64) !void {
     _ = current_time;
     _ = delta;
     if (this.scores_done_loading and !this.scores_done_displaying) {
-        try this.display_scores(0, this.scores_list.items.len);
+        var page = this.stage.store.get(this.page);
+        page.Int = 1;
+        try this.stage.store.set(.Int, this.page, page.Int);
+
+        var page_total = this.stage.store.get(this.page_total);
+        const over: usize = if (this.scores_list.items.len % this.page_size > 0) 1 else 0;
+        page_total.Int = @intCast(i32, @divTrunc(this.scores_list.items.len, this.page_size) + over);
+        try this.stage.store.set(.Int, this.page_total, page_total.Int);
+
+        const amount = std.math.min(this.page_size, this.scores_list.items.len);
+        try this.display_scores(0, amount);
         this.scores_done_displaying = true;
     }
 }
@@ -134,9 +141,17 @@ pub fn event(this: *@This(), evt: seizer.event.Event) !void {
                 if (node.handle == this.btn_back) {
                     return this.ctx.scene.pop();
                 } else if (node.handle == this.btn_prev) {
-                    // TODO: paginate score info
+                    if (this.scores_done_loading) {
+                        this.page_start -|= this.page_size;
+                        const amount = std.math.min(this.page_start + this.page_size, this.scores_list.items.len);
+                        try this.display_scores(this.page_start, amount);
+                    }
                 } else if (node.handle == this.btn_next) {
-                    // TODO: paginate score info
+                    if (this.scores_done_loading and this.page_start + this.page_size < this.scores_list.items.len) {
+                        this.page_start += this.page_size;
+                        const amount = std.math.min(this.page_start + this.page_size, this.scores_list.items.len);
+                        try this.display_scores(this.page_start, amount);
+                    }
                 }
             }
         }
