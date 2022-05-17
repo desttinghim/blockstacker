@@ -44,7 +44,8 @@ pub fn init(ctx: *Context) !@This() {
     const spinner = try this.stage.layout.insert(frame, Patch.frame(.None).container(.HList));
     {
         this.btn_dec = try this.stage.layout.insert(spinner, Patch.frame(.Keyrest).dataValue(decrement));
-        const label = try this.stage.layout.insert(spinner, Patch.frame(.Label).container(.HList));
+        const label_center = try this.stage.layout.insert(spinner, Patch.frame(.None).container(.Center));
+        const label = try this.stage.layout.insert(label_center, Patch.frame(.Label).container(.HList));
         _ = try this.stage.layout.insert(label, Patch.frame(.None).dataValue(levellbl));
         _ = try this.stage.layout.insert(label, Patch.frame(.None).dataValue(this.level_int));
         this.btn_inc = try this.stage.layout.insert(spinner, Patch.frame(.Keyrest).dataValue(increment));

@@ -41,18 +41,19 @@ pub fn init(ctx: *Context) !@This() {
     const prevlbl = try this.stage.store.new(.{ .Bytes = "Prev." });
     const nextlbl = try this.stage.store.new(.{ .Bytes = "Next" });
     const loadlbl = try this.stage.store.new(.{ .Bytes = "Loading..." });
-    this.page = try this.stage.store.new(.{ .Int = 0});
+    this.page = try this.stage.store.new(.{ .Int = 0 });
     const divider = try this.stage.store.new(.{ .Bytes = "/" });
-    this.page_total = try this.stage.store.new(.{ .Int = 0});
+    this.page_total = try this.stage.store.new(.{ .Int = 0 });
 
     const center = try this.stage.layout.insert(null, Patch.frame(.None).container(.Center));
     const frame = try this.stage.layout.insert(center, Patch.frame(.Frame).container(.VList));
     _ = try this.stage.layout.insert(frame, Patch.frame(.Nameplate).dataValue(namelbl));
     // Buttons "Toolbar"
-    const hlist = try this.stage.layout.insert(frame, Patch.frame(.None).container(.HList));
+    const hlist = try this.stage.layout.insert(frame, Patch.frame(.None).container(.HDiv));
     this.btn_back = try this.stage.layout.insert(hlist, Patch.frame(.Keyrest).dataValue(backlbl));
     this.btn_prev = try this.stage.layout.insert(hlist, Patch.frame(.Keyrest).dataValue(prevlbl));
-    const page_container = try this.stage.layout.insert(hlist, Patch.frame(.Label).container(.HList));
+    const page_center = try this.stage.layout.insert(hlist, Patch.frame(.None).container(.Center));
+    const page_container = try this.stage.layout.insert(page_center, Patch.frame(.Label).container(.HList));
     _ = try this.stage.layout.insert(page_container, Patch.frame(.None).dataValue(this.page));
     _ = try this.stage.layout.insert(page_container, Patch.frame(.None).dataValue(divider));
     _ = try this.stage.layout.insert(page_container, Patch.frame(.None).dataValue(this.page_total));
@@ -75,7 +76,11 @@ pub fn deinit(this: *@This()) void {
 
 pub fn display_scores(this: *@This(), begin: usize, end: usize) !void {
     this.stage.layout.remove(this.score_list);
-    this.score_list = try this.stage.layout.insert(this.score_container, Patch.frame(.None).container(.VList));
+    if (end - begin < this.page_size) {
+        this.score_list = try this.stage.layout.insert(this.score_container, Patch.frame(.None).container(.VList).minSize(.{ 0, 96 }));
+    } else {
+        this.score_list = try this.stage.layout.insert(this.score_container, Patch.frame(.None).container(.VList));
+    }
     {
         var buf: [50]u8 = undefined;
         const text = try std.fmt.bufPrint(&buf, "{s:<12}|{s:^5}|{s:^8}|{s:^3}|{s:^4}", .{ "Date", "Time", "Score", "Lvl", "Rows" });
@@ -145,12 +150,19 @@ pub fn event(this: *@This(), evt: seizer.event.Event) !void {
                         this.page_start -|= this.page_size;
                         const amount = std.math.min(this.page_start + this.page_size, this.scores_list.items.len);
                         try this.display_scores(this.page_start, amount);
+                        var page = this.stage.store.get(this.page);
+                        page.Int -= 1;
+                        if (page.Int == 0) page.Int = 1;
+                        try this.stage.store.set(.Int, this.page, page.Int);
                     }
                 } else if (node.handle == this.btn_next) {
                     if (this.scores_done_loading and this.page_start + this.page_size < this.scores_list.items.len) {
                         this.page_start += this.page_size;
                         const amount = std.math.min(this.page_start + this.page_size, this.scores_list.items.len);
                         try this.display_scores(this.page_start, amount);
+                        var page = this.stage.store.get(this.page);
+                        page.Int += 1;
+                        try this.stage.store.set(.Int, this.page, page.Int);
                     }
                 }
             }
@@ -171,7 +183,6 @@ pub fn event(this: *@This(), evt: seizer.event.Event) !void {
 
 pub fn render(this: *@This(), _: f64) !void {
     const screen_size = seizer.getScreenSize();
-    // const screen_size_f = screen_size.intToFloat(f32);
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
@@ -180,40 +191,6 @@ pub fn render(this: *@This(), _: f64) !void {
     this.ctx.flat.setSize(screen_size);
 
     this.stage.paintAll(.{ 0, 0, screen_size.x, screen_size.y });
-
-    // if (this.scores_done_loading) {
-    //     var y: f32 = (screen_size_f.y - this.ctx.font.lineHeight * @intToFloat(f32, this.scores_list.items.len)) / 2;
-    //     for (this.scores_list.items) |entry| {
-    //         var buf: [50]u8 = undefined;
-    //         {
-    //             const naivedt = chrono.datetime.NaiveDateTime.from_timestamp(entry.timestamp, 0) catch @panic("chrono");
-    //             const dt = chrono.datetime.DateTime.utc(naivedt, this.ctx.timezone);
-    //             const naive_dt = dt.toNaiveDateTime() catch @panic("chrono2: electric boogaloo");
-    //             const dt_fmt = naive_dt.formatted("%Y-%m-%d");
-    //             const text = std.fmt.bufPrint(&buf, "{}", .{dt_fmt}) catch continue;
-    //             this.ctx.font.drawText(&this.ctx.flat, text, vec2f(screen_size_f.x * 1 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
-    //         }
-    //         {
-    //             const minutes = @floor(entry.playTime / std.time.s_per_min);
-    //             const seconds = @floor(entry.playTime - minutes * std.time.s_per_min);
-    //             const text = std.fmt.bufPrint(&buf, "{d}:{d:0>2}", .{ minutes, seconds }) catch continue;
-    //             this.ctx.font.drawText(&this.ctx.flat, text, vec2f(screen_size_f.x * 2 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
-    //         }
-    //         {
-    //             const text = std.fmt.bufPrint(&buf, "{}", .{entry.score}) catch continue;
-    //             this.ctx.font.drawText(&this.ctx.flat, text, vec2f(screen_size_f.x * 3 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
-    //         }
-    //         {
-    //             const text = std.fmt.bufPrint(&buf, "{}", .{entry.startingLevel}) catch continue;
-    //             this.ctx.font.drawText(&this.ctx.flat, text, vec2f(screen_size_f.x * 4 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
-    //         }
-    //         {
-    //             const text = std.fmt.bufPrint(&buf, "{}", .{entry.rowsCleared}) catch continue;
-    //             this.ctx.font.drawText(&this.ctx.flat, text, vec2f(screen_size_f.x * 5 / 6, y), .{ .scale = 1, .textAlign = .Right, .textBaseline = .Top });
-    //         }
-    //         y += this.ctx.font.lineHeight;
-    //     }
-    // }
 
     this.ctx.flat.flush();
 }
@@ -237,6 +214,8 @@ fn load_scores(this: *@This()) void {
 
         this.scores_list.append(score) catch unreachable;
     }
+
+    std.mem.reverse(ScoreEntry, this.scores_list.items);
 
     this.scores_done_loading = true;
 }
