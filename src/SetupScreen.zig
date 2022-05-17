@@ -67,44 +67,59 @@ pub fn update(this: *@This(), current_time: f64, delta: f64) !void {
 }
 
 pub fn event(this: *@This(), evt: seizer.event.Event) !void {
+    const Action = enum { None, Start, Inc, Dec, Back };
+    var do = Action.None;
     if (this.stage.event(evt)) |action| {
         if (action.emit == 1) {
             if (action.node) |node| {
                 if (node.handle == this.btn_start) {
-                    var level = this.stage.store.get(this.level_int);
-                    this.ctx.setup.level = @intCast(u8, @truncate(i8, level.Int));
-                    // TODO: Load game
-                    try this.ctx.scene.replace(.Game);
-                    return;
+                    do = .Start;
                 } else if (node.handle == this.btn_inc) {
-                    var level = this.stage.store.get(this.level_int);
-                    if (level.Int < 9) {
-                        level.Int += 1;
-                        try this.stage.store.set(.Int, this.level_int, level.Int);
-                    }
+                    do = .Inc;
                 } else if (node.handle == this.btn_dec) {
-                    var level = this.stage.store.get(this.level_int);
-                    if (level.Int > 0) {
-                        level.Int -= 1;
-                        try this.stage.store.set(.Int, this.level_int, level.Int);
-                    }
+                    do = .Dec;
                 } else if (node.handle == this.btn_back) {
-                    this.ctx.scene.pop();
-                    return;
+                    do = .Back;
                 }
             }
         }
     }
     switch (evt) {
         .KeyDown => |e| switch (e.scancode) {
-            .X, .ESCAPE => this.ctx.scene.pop(),
+            .X, .ESCAPE => do = .Back,
             else => {},
         },
         .ControllerButtonDown => |cbutton| switch (cbutton.button) {
-            .START, .B => this.ctx.scene.pop(),
+            .START, .B => do = .Back,
             else => {},
         },
         else => {},
+    }
+    switch (do) {
+        .None => {},
+        .Start => {
+            var level = this.stage.store.get(this.level_int);
+            this.ctx.setup.level = @intCast(u8, @truncate(i8, level.Int));
+
+            try this.ctx.scene.replace(.Game);
+        },
+        .Inc => {
+            var level = this.stage.store.get(this.level_int);
+            if (level.Int < 9) {
+                level.Int += 1;
+                try this.stage.store.set(.Int, this.level_int, level.Int);
+            }
+        },
+        .Dec => {
+            var level = this.stage.store.get(this.level_int);
+            if (level.Int > 0) {
+                level.Int -= 1;
+                try this.stage.store.set(.Int, this.level_int, level.Int);
+            }
+        },
+        .Back => {
+            this.ctx.scene.pop();
+        },
     }
 }
 
