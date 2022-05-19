@@ -166,8 +166,7 @@ pub fn event(this: *@This(), evt: seizer.event.Event) !void {
             .TAB => if (this.inputs.hold != .Pressed) {
                 this.inputs.hold = .JustPressed;
             },
-
-            // .ESCAPE => ctx.push_screen(PauseScreen) catch @panic("Could not push screen"),
+            .ESCAPE => try this.ctx.scene.push(.PauseScreen),
             else => {},
         },
         .KeyUp => |e| switch (e.scancode) {
@@ -189,7 +188,7 @@ pub fn event(this: *@This(), evt: seizer.event.Event) !void {
             .DPAD_RIGHT => if (this.inputs.right != .Pressed) {
                 this.inputs.right = .JustPressed;
             },
-            // .START => ctx.push_screen(PauseScreen) catch @panic("Could not push screen"),
+            .START => try this.ctx.scene.push(.PauseScreen),
             .A => this.inputs.rot_ws = .JustPressed,
             .B => this.inputs.rot_cw = .JustPressed,
             .LEFTSHOULDER => this.inputs.hold = .JustPressed,

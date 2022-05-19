@@ -1,85 +1,119 @@
 const std = @import("std");
-const Screen = @import("context.zig").Screen;
 const Context = @import("context.zig").Context;
 const seizer = @import("seizer");
-const Menu = @import("menu.zig").Menu;
-const MenuItem = @import("menu.zig").MenuItem;
-const MenuAndItem = @import("menu.zig").MenuAndItem;
 const gl = seizer.gl;
 const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
-const MainMenuScreen = @import("main_menu.zig").MainMenuScreen;
-const GameScreen = @import("game.zig").GameScreen;
-const ui = @import("ui/default.zig");
+const Texture = seizer.Texture;
+const Patch = @import("context.zig").Patch;
 
-pub const PauseScreen: Screen = .{
-    .init = init,
-    .deinit = deinit,
-    .update = update,
-    .event = event,
-    .render = render,
-};
+ctx: *Context,
+stage: seizer.ui.Stage,
+btn_continue: usize = 0,
+btn_restart: usize = 0,
+btn_menu: usize = 0,
 
-var menu: Menu = undefined;
+pub fn init(ctx: *Context) !@This() {
+    var this = @This(){
+        .ctx = ctx,
+        .stage = try seizer.ui.Stage.init(ctx.allocator, &ctx.font, &ctx.flat, &Patch.transitions),
+    };
+    this.stage.painter.scale = 2;
+    try Patch.addStyles(&this.stage, this.ctx.ui_tex);
 
-fn init(ctx: *Context) void {
-    menu = Menu.init(ctx, "Pause") catch @panic("Couldn't set up menu");
-    _ = menu.add_menu_item(.{ .label = "Continue", ._type = .{ .action = action_continue } }) catch @panic("add item");
-    _ = menu.add_menu_item(.{ .label = "Restart", ._type = .{ .action = action_restart } }) catch @panic("add item");
-    _ = menu.add_menu_item(.{ .label = "Main Menu", ._type = .{ .action = action_main_menu } }) catch @panic("add item");
+    const namelbl = try this.stage.store.new(.{ .Bytes = "Paused" });
+    const continuelbl = try this.stage.store.new(.{ .Bytes = "Continue" });
+    const restartlbl = try this.stage.store.new(.{ .Bytes = "Restart" });
+    const menulbl = try this.stage.store.new(.{ .Bytes = "Main Menu" });
+
+    const center = try this.stage.layout.insert(null, Patch.frame(.None).container(.Center));
+    const frame = try this.stage.layout.insert(center, Patch.frame(.Frame).container(.VList));
+    _ = try this.stage.layout.insert(frame, Patch.frame(.Nameplate).dataValue(namelbl));
+    this.btn_continue = try this.stage.layout.insert(frame, Patch.frame(.Keyrest).dataValue(continuelbl));
+    this.btn_restart = try this.stage.layout.insert(frame, Patch.frame(.Keyrest).dataValue(restartlbl));
+    this.btn_menu = try this.stage.layout.insert(frame, Patch.frame(.Keyrest).dataValue(menulbl));
+
+    this.stage.sizeAll();
+
+    return this;
 }
 
-fn update(ctx: *Context, current_time: f64, delta: f64) void {
-    _ = ctx;
+pub fn update(this: *@This(), current_time: f64, delta: f64) !void {
     _ = current_time;
     _ = delta;
-    const screenSize = seizer.getScreenSize();
-    menu.stage.layout(.{ 0, 0, screenSize.x, screenSize.y });
+    _ = this;
 }
 
-fn deinit(ctx: *Context) void {
-    menu.deinit(ctx);
+pub fn deinit(this: *@This()) !void {
+    std.log.info("deinit {}", .{@ptrToInt(this)});
+    this.stage.deinit();
 }
 
-fn action_continue(menu_ptr: *Menu, _: ui.EventData) void {
-    menu_ptr.ctx.pop_screen();
-}
-
-fn action_restart(menu_ptr: *Menu, _: ui.EventData) void {
-    menu_ptr.ctx.set_screen(GameScreen) catch @panic("Switching screen somehow caused allocation");
-}
-
-fn action_main_menu(menu_ptr: *Menu, _: ui.EventData) void {
-    menu_ptr.ctx.set_screen(MainMenuScreen) catch @panic("Couldn't set screen");
-}
-
-fn event(ctx: *Context, evt: seizer.event.Event) void {
-    menu.event(ctx, evt);
+pub fn event(this: *@This(), evt: seizer.event.Event) !void {
+    const Action = enum { None, Restart, Continue, Menu };
+    var do = Action.None;
+    if (this.stage.event(evt)) |action| {
+        if (action.emit == 1) {
+            if (action.node) |node| {
+                if (node.handle == this.btn_continue) {
+                    do = .Continue;
+                } else if (node.handle == this.btn_restart) {
+                    do = .Restart;
+                } else if (node.handle == this.btn_menu) {
+                    do = .Menu;
+                }
+            }
+        }
+    }
     switch (evt) {
         .KeyDown => |e| switch (e.scancode) {
-            .X, .ESCAPE => ctx.pop_screen(),
+            .X, .ESCAPE => do = .Continue,
             else => {},
         },
         .ControllerButtonDown => |cbutton| switch (cbutton.button) {
-            .START, .B => ctx.pop_screen(),
+            .START, .B => do = .Continue,
             else => {},
         },
-        .Quit => seizer.quit(),
         else => {},
+    }
+    switch (do) {
+        .None => {},
+        .Restart => {
+            // Store ctx so we can refer to it after we've popped the current
+            // scene
+            const ctx = this.ctx;
+            // Remove pause screen
+            ctx.scene.pop();
+            // Replace game with itself
+            try ctx.scene.replace(.Game);
+        },
+        .Menu => {
+            // Store ctx so we can refer to it after we've popped the current
+            // scene
+            const ctx = this.ctx;
+            // Remove the pause screen
+            ctx.scene.pop();
+            // Remove the game screen
+            ctx.scene.pop();
+        },
+        .Continue  => {
+            // @breakpoint();
+            this.ctx.scene.pop();
+        },
     }
 }
 
-fn render(ctx: *Context, alpha: f64) void {
+pub fn render(this: *@This(), alpha: f64) !void {
+    _ = alpha;
     const screen_size = seizer.getScreenSize();
 
     gl.clearColor(0.0, 0.0, 0.0, 1.0);
     gl.clear(gl.COLOR_BUFFER_BIT);
     gl.viewport(0, 0, screen_size.x, screen_size.y);
 
-    ctx.flat.setSize(screen_size);
+    this.ctx.flat.setSize(screen_size);
 
-    const menu_size = menu.getMinSize(ctx);
-    menu.render(ctx, alpha, menu_size);
+    this.stage.paintAll(.{ 0, 0, screen_size.x, screen_size.y });
 
-    ctx.flat.flush();
+    this.ctx.flat.flush();
 }

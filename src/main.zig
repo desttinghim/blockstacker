@@ -21,6 +21,7 @@ pub const SceneManager = scene.Manager(Context, &[_]type {
     @import("GameOver.zig"),
     @import("ScoreScreen.zig"),
     @import("SetupScreen.zig"),
+    @import("PauseScreen.zig"),
 });
 
 pub usingnamespace seizer.run(.{
