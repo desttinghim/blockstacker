@@ -21,7 +21,6 @@ const get_score = @import("score.zig").get_score;
 const get_drop_delta = @import("score.zig").get_drop_delta;
 const get_soft_drop_delta = @import("score.zig").get_soft_drop_delta;
 const Context = @import("context.zig").Context;
-// const PauseScreen = @import("PauseScreen.zig");
 const ScoreEntry = @import("score.zig").ScoreEntry;
 const geom = seizer.geometry;
 
@@ -179,7 +178,6 @@ pub fn event(this: *@This(), evt: seizer.event.Event) !void {
             .S, .DOWN => this.inputs.down = .Released,
             .W, .UP => this.inputs.hardDrop = .Released,
             .TAB => this.inputs.hold = .Released,
-
             else => {},
         },
         .ControllerButtonDown => |cbutton| switch (cbutton.button) {

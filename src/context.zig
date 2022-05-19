@@ -36,16 +36,6 @@ pub const Context = struct {
     db: crossdb.Database,
     timezone: *const chrono.timezone.TimeZone,
 
-    pub const transitions = [_]Observer.Transition{
-        Observer.Transition{ .begin = @enumToInt(Patch.Keyrest), .event = .enter, .end = @enumToInt(Patch.Keyup) },
-        Observer.Transition{ .begin = @enumToInt(Patch.Keyup), .event = .exit, .end = @enumToInt(Patch.Keyrest) },
-        Observer.Transition{ .begin = @enumToInt(Patch.Keyup), .event = .press, .end = @enumToInt(Patch.Keydown) },
-        Observer.Transition{ .begin = @enumToInt(Patch.Keydown), .event = .exit, .end = @enumToInt(Patch.Keyrest) },
-        Observer.Transition{ .begin = @enumToInt(Patch.Keydown), .event = .release, .end = @enumToInt(Patch.Keyup), .emit = 1 },
-        Observer.Transition{ .begin = @enumToInt(Patch.Input), .event = .press, .end = @enumToInt(Patch.InputEdit), .emit = 2 },
-        Observer.Transition{ .begin = @enumToInt(Patch.InputEdit), .event = .onblur, .end = @enumToInt(Patch.Input), .emit = 3 },
-    };
-
     pub fn add_score(self: *@This(), score: ScoreEntry) !void {
         try seizer.execute(self.allocator, add_score_async, .{ self, score });
     }
@@ -86,6 +76,16 @@ pub const Patch = enum {
     Keyrest,
     Keyup,
     Keydown,
+
+    pub const transitions = [_]Observer.Transition{
+        Observer.Transition{ .begin = @enumToInt(Patch.Keyrest), .event = .enter, .end = @enumToInt(Patch.Keyup) },
+        Observer.Transition{ .begin = @enumToInt(Patch.Keyup), .event = .exit, .end = @enumToInt(Patch.Keyrest) },
+        Observer.Transition{ .begin = @enumToInt(Patch.Keyup), .event = .press, .end = @enumToInt(Patch.Keydown) },
+        Observer.Transition{ .begin = @enumToInt(Patch.Keydown), .event = .exit, .end = @enumToInt(Patch.Keyrest) },
+        Observer.Transition{ .begin = @enumToInt(Patch.Keydown), .event = .release, .end = @enumToInt(Patch.Keyup), .emit = 1 },
+        Observer.Transition{ .begin = @enumToInt(Patch.Input), .event = .press, .end = @enumToInt(Patch.InputEdit), .emit = 2 },
+        Observer.Transition{ .begin = @enumToInt(Patch.InputEdit), .event = .onblur, .end = @enumToInt(Patch.Input), .emit = 3 },
+    };
 
     pub fn asInt(style: Patch) u16 {
         return @enumToInt(style);

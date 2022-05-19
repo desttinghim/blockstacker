@@ -11,15 +11,9 @@ btn_setup: usize = 0,
 btn_mainmenu: usize = 0,
 
 pub fn init(ctx: *Context) !@This() {
-    // score.timestamp = @divTrunc(seizer.now(), 1000);
-    // go_menu = Menu.init(ctx, "Game Over!") catch @panic("Couldn't setup menu");
-    // _ = go_menu.add_menu_item(.{ .label = "Restart", ._type = .{ .action = go_action_restart } }) catch @panic("add menu item");
-    // _ = go_menu.add_menu_item(.{ .label = "Setup", ._type = .{ .action = go_action_setup } }) catch @panic("add menu item");
-    // _ = go_menu.add_menu_item(.{ .label = "Main Menu", ._type = .{ .action = go_action_main_menu } }) catch @panic("add menu item");
-
     var this = @This(){
         .ctx = ctx,
-        .stage = try seizer.ui.Stage.init(ctx.allocator, &ctx.font, &ctx.flat, &Context.transitions),
+        .stage = try seizer.ui.Stage.init(ctx.allocator, &ctx.font, &ctx.flat, &Patch.transitions),
     };
     this.stage.painter.scale = 2;
     try Patch.addStyles(&this.stage, this.ctx.ui_tex);
@@ -50,22 +44,6 @@ pub fn update(this: *@This(), current_time: f64, delta: f64) !void {
 pub fn deinit(this: *@This()) void {
     this.stage.deinit();
 }
-
-// fn go_action_restart(menu_ptr: *Menu, _: ui.EventData) void {
-//     menu_ptr.ctx.add_score(score) catch @panic("Couldn't add score to high score list");
-//     menu_ptr.ctx.set_screen(GameScreen) catch @panic("Couldn't set screen");
-// }
-
-// fn go_action_setup(menu_ptr: *Menu, _: ui.EventData) void {
-//     menu_ptr.ctx.add_score(score) catch @panic("Couldn't add score to high score list");
-//     menu_ptr.ctx.set_screen(MainMenuScreen) catch @panic("Couldn't set screen");
-//     menu_ptr.ctx.push_screen(SetupScreen) catch @panic("Couldn't push screen");
-// }
-
-// fn go_action_main_menu(menu_ptr: *Menu, _: ui.EventData) void {
-//     menu_ptr.ctx.add_score(score) catch @panic("Couldn't add score to high score list");
-//     menu_ptr.ctx.set_screen(MainMenuScreen) catch @panic("Couldn't set screen");
-// }
 
 pub fn event(this: *@This(), evt: seizer.event.Event) !void {
     // go_menu.event(ctx, evt);

@@ -29,7 +29,7 @@ pub fn init(ctx: *Context) !@This() {
     var this = @This(){
         .ctx = ctx,
         .scores_list = std.ArrayList(ScoreEntry).init(ctx.allocator),
-        .stage = try seizer.ui.Stage.init(ctx.allocator, &ctx.font, &ctx.flat, &Context.transitions),
+        .stage = try seizer.ui.Stage.init(ctx.allocator, &ctx.font, &ctx.flat, &Patch.transitions),
         .page = undefined,
         .page_total = undefined,
     };
@@ -47,7 +47,8 @@ pub fn init(ctx: *Context) !@This() {
 
     const center = try this.stage.layout.insert(null, Patch.frame(.None).container(.Center));
     const frame = try this.stage.layout.insert(center, Patch.frame(.Frame).container(.VList));
-    _ = try this.stage.layout.insert(frame, Patch.frame(.Nameplate).dataValue(namelbl));
+    const center_name = try this.stage.layout.insert(frame, Patch.frame(.None).container(.Center));
+    _ = try this.stage.layout.insert(center_name, Patch.frame(.Nameplate).dataValue(namelbl));
     // Buttons "Toolbar"
     const hlist = try this.stage.layout.insert(frame, Patch.frame(.None).container(.HDiv));
     this.btn_back = try this.stage.layout.insert(hlist, Patch.frame(.Keyrest).dataValue(backlbl));
@@ -76,18 +77,15 @@ pub fn deinit(this: *@This()) void {
 
 pub fn display_scores(this: *@This(), begin: usize, end: usize) !void {
     this.stage.layout.remove(this.score_list);
-    if (end - begin < this.page_size) {
-        this.score_list = try this.stage.layout.insert(this.score_container, Patch.frame(.None).container(.VList).minSize(.{ 0, 96 }));
-    } else {
-        this.score_list = try this.stage.layout.insert(this.score_container, Patch.frame(.None).container(.VList));
-    }
+    this.score_list = try this.stage.layout.insert(this.score_container, Patch .frame(.None) .container(.VList));
     {
         var buf: [50]u8 = undefined;
         const text = try std.fmt.bufPrint(&buf, "{s:<12}|{s:^5}|{s:^8}|{s:^3}|{s:^4}", .{ "Date", "Time", "Score", "Lvl", "Rows" });
         const ref = try this.stage.store.new(.{ .Bytes = text });
         _ = try this.stage.layout.insert(this.score_list, Patch.frame(.Label).dataValue(ref));
     }
-    const list_box = try this.stage.layout.insert(this.score_list, Patch.frame(.Label).container(.VList));
+    const min_size = @Vector(2, i32){ 0, @floatToInt(i32, this.ctx.font.lineHeight * this.stage.painter.scale) * @intCast(i32, this.page_size) };
+    const list_box = try this.stage.layout.insert(this.score_list, Patch.frame(.Label).container(.VList).minSize(min_size));
     var i = begin;
     while (i < end) : (i += 1) {
         const entry = this.scores_list.items[i];

@@ -6,8 +6,6 @@ const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
 const Vec2 = seizer.math.Vec(2, i32);
 const vec2 = Vec2.init;
-// const GameScreen = @import("game.zig").GameScreen;
-const ScoreScreen = @import("ScoreScreen.zig");
 const Texture = seizer.Texture;
 const Patch = @import("context.zig").Patch;
 
@@ -21,7 +19,7 @@ pub fn init(ctx: *Context) !@This() {
     // TODO: Add settings screen for settings that don't affect gameplay
     var this = @This(){
         .ctx = ctx,
-        .stage = try seizer.ui.Stage.init(ctx.allocator, &ctx.font, &ctx.flat, &Context.transitions),
+        .stage = try seizer.ui.Stage.init(ctx.allocator, &ctx.font, &ctx.flat, &Patch.transitions),
     };
     this.stage.painter.scale = 2;
     try Patch.addStyles(&this.stage, this.ctx.ui_tex);

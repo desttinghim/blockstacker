@@ -23,7 +23,7 @@ btn_back: usize = 0,
 pub fn init(ctx: *Context) !@This() {
     var this = @This(){
         .ctx = ctx,
-        .stage = try seizer.ui.Stage.init(ctx.allocator, &ctx.font, &ctx.flat, &Context.transitions),
+        .stage = try seizer.ui.Stage.init(ctx.allocator, &ctx.font, &ctx.flat, &Patch.transitions),
         .level_int = undefined,
     };
     this.stage.painter.scale = 2;
@@ -39,7 +39,8 @@ pub fn init(ctx: *Context) !@This() {
 
     const center = try this.stage.layout.insert(null, Patch.frame(.None).container(.Center));
     const frame = try this.stage.layout.insert(center, Patch.frame(.Frame).container(.VList));
-    _ = try this.stage.layout.insert(frame, Patch.frame(.Nameplate).dataValue(namelbl));
+    const center_name = try this.stage.layout.insert(frame, Patch.frame(.None).container(.Center));
+    _ = try this.stage.layout.insert(center_name, Patch.frame(.Nameplate).dataValue(namelbl));
     this.btn_start = try this.stage.layout.insert(frame, Patch.frame(.Keyrest).dataValue(startlbl));
     const spinner = try this.stage.layout.insert(frame, Patch.frame(.None).container(.HList));
     {
