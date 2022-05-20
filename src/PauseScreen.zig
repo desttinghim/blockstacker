@@ -45,7 +45,6 @@ pub fn update(this: *@This(), current_time: f64, delta: f64) !void {
 }
 
 pub fn deinit(this: *@This()) void {
-    std.log.info("deinit {}", .{@ptrToInt(this)});
     this.stage.deinit();
 }
 
