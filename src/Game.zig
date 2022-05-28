@@ -211,7 +211,7 @@ pub fn event(this: *@This(), evt: seizer.event.Event) !void {
 
 pub fn update(this: *@This(), current_time: f64, delta: f64) !void {
     const ctx = this.ctx;
-    this.score.playTime += delta;
+    this.score.playTime += @floatToInt(u64, delta * 1000);
     {
         var new_piece = this.piece;
         var new_pos = this.piece_pos;

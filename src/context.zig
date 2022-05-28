@@ -12,6 +12,7 @@ const Tilemap = @import("util.zig").Tilemap;
 const NinePatch = seizer.ninepatch.NinePatch;
 const Observer = seizer.ui.Observer;
 const geom = seizer.geometry;
+const blockstacker = @import("./main.zig");
 
 pub const Context = struct {
     flat: SpriteBatch,
@@ -33,32 +34,18 @@ pub const Context = struct {
         rotate: seizer.audio.NodeHandle,
         move: seizer.audio.NodeHandle,
     },
-    db: crossdb.Database,
     timezone: *const chrono.timezone.TimeZone,
 
-    pub fn add_score(self: *@This(), score: ScoreEntry) !void {
-        try seizer.execute(self.allocator, add_score_async, .{ self, score });
-    }
+    storage: blockstacker.storage.LinearMemStorage,
+    score_write: ?blockstacker.score.Write(*blockstacker.storage.LinearMemStorage),
 
-    pub fn add_score_async(self: *@This(), score: ScoreEntry) void {
-        var txn = self.db.begin(&.{"scores"}, .{}) catch @panic("Failed to add score");
-        errdefer txn.deinit();
-
-        {
-            var scores = txn.store("scores") catch @panic("Failed to add score");
-            defer scores.release();
-
-            var key: [8]u8 = undefined;
-
-            std.mem.writeIntBig(i64, &key, score.timestamp);
-
-            const val = encode(self.allocator, score) catch unreachable;
-            defer self.allocator.free(val);
-
-            scores.put(&key, val) catch @panic("Failed to add score");
-        }
-
-        txn.commit() catch @panic("Failed to add score");
+    pub fn add_score(this: *@This(), score: ScoreEntry) !void {
+        if (this.score_write) |score_write| score_write.deinit();
+        this.score_write = try blockstacker.score.Write(*blockstacker.storage.LinearMemStorage).init(
+            this.allocator,
+            this.storage.storage(),
+            &.{score},
+        );
     }
 };
 

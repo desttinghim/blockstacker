@@ -6,14 +6,15 @@ const seizer = @import("seizer");
 const gl = seizer.gl;
 const Vec2f = seizer.math.Vec(2, f32);
 const vec2f = Vec2f.init;
-const ScoreEntry = @import("./score.zig").ScoreEntry;
+const score = @import("./score.zig");
 const Decoder = @import("proto_structs").Decoder;
 const chrono = @import("chrono");
+const builtin = @import("builtin");
+const blockstacker = @import("./main.zig");
 
 ctx: *Context,
 stage: seizer.ui.Stage,
-scores_list: std.ArrayList(ScoreEntry),
-scores_done_loading: bool = false,
+score_read: score.Read(*blockstacker.storage.LinearMemStorage),
 scores_done_displaying: bool = false,
 score_container: usize = 0,
 score_list: usize = 0,
@@ -26,9 +27,12 @@ btn_prev: usize = 0,
 btn_next: usize = 0,
 
 pub fn init(ctx: *Context) !@This() {
+    var scores = try score.Read(*blockstacker.storage.LinearMemStorage).init(ctx.allocator, ctx.storage.storage());
+    errdefer scores.deinit();
+
     var this = @This(){
         .ctx = ctx,
-        .scores_list = std.ArrayList(ScoreEntry).init(ctx.allocator),
+        .score_read = scores,
         .stage = try seizer.ui.Stage.init(ctx.allocator, &ctx.font, &ctx.flat, &Patch.transitions),
         .page = undefined,
         .page_total = undefined,
@@ -65,19 +69,17 @@ pub fn init(ctx: *Context) !@This() {
 
     this.stage.sizeAll();
 
-    try seizer.execute(ctx.allocator, load_scores, .{&this});
-
     return this;
 }
 
 pub fn deinit(this: *@This()) void {
     this.stage.deinit();
-    this.scores_list.deinit();
+    this.score_read.deinit();
 }
 
 pub fn display_scores(this: *@This(), begin: usize, end: usize) !void {
     this.stage.layout.remove(this.score_list);
-    this.score_list = try this.stage.layout.insert(this.score_container, Patch .frame(.None) .container(.VList));
+    this.score_list = try this.stage.layout.insert(this.score_container, Patch.frame(.None).container(.VList));
     {
         var buf: [50]u8 = undefined;
         const text = try std.fmt.bufPrint(&buf, "{s:<12}|{s:^5}|{s:^8}|{s:^3}|{s:^4}", .{ "Date", "Time", "Score", "Lvl", "Rows" });
@@ -88,7 +90,7 @@ pub fn display_scores(this: *@This(), begin: usize, end: usize) !void {
     const list_box = try this.stage.layout.insert(this.score_list, Patch.frame(.Label).container(.VList).minSize(min_size));
     var i = begin;
     while (i < end) : (i += 1) {
-        const entry = this.scores_list.items[i];
+        const entry = this.score_read.scores.items[i];
         var buf: [50]u8 = undefined;
         var buf_date: [12]u8 = undefined;
         var buf_time: [5]u8 = undefined;
@@ -103,14 +105,14 @@ pub fn display_scores(this: *@This(), begin: usize, end: usize) !void {
             break :date try std.fmt.bufPrint(&buf_date, "{}", .{dt_fmt});
         };
         const time = time: {
-            const minutes = @floor(entry.playTime / std.time.s_per_min);
-            const seconds = @floor(entry.playTime - minutes * std.time.s_per_min);
+            const minutes = entry.playTime / std.time.s_per_min;
+            const seconds = entry.playTime - minutes * std.time.s_per_min;
             break :time try std.fmt.bufPrint(&buf_time, "{d}:{d:0>2}", .{ minutes, seconds });
         };
-        const score = try std.fmt.bufPrint(&buf_score, "{}", .{@intCast(i32, @truncate(u32, entry.score))});
+        const score_str = try std.fmt.bufPrint(&buf_score, "{}", .{@intCast(i32, @truncate(u32, entry.score))});
         const level = try std.fmt.bufPrint(&buf_level, "{}", .{entry.startingLevel});
         const rows = try std.fmt.bufPrint(&buf_rows, "{}", .{entry.rowsCleared});
-        const text = try std.fmt.bufPrint(&buf, "{s:<12}|{s:>5}|{s:>8}|{s:>3}|{s:>4}", .{ date, time, score, level, rows });
+        const text = try std.fmt.bufPrint(&buf, "{s:<12}|{s:>5}|{s:>8}|{s:>3}|{s:>4}", .{ date, time, score_str, level, rows });
         const ref = try this.stage.store.new(.{ .Bytes = text });
         _ = try this.stage.layout.insert(list_box, Patch.frame(.None).dataValue(ref));
     }
@@ -121,17 +123,18 @@ pub fn display_scores(this: *@This(), begin: usize, end: usize) !void {
 pub fn update(this: *@This(), current_time: f64, delta: f64) !void {
     _ = current_time;
     _ = delta;
-    if (this.scores_done_loading and !this.scores_done_displaying) {
+    try this.score_read.update();
+    if (this.score_read.state == .done and !this.scores_done_displaying) {
         var page = this.stage.store.get(this.page);
         page.Int = 1;
         try this.stage.store.set(.Int, this.page, page.Int);
 
         var page_total = this.stage.store.get(this.page_total);
-        const over: usize = if (this.scores_list.items.len % this.page_size > 0) 1 else 0;
-        page_total.Int = @intCast(i32, @divTrunc(this.scores_list.items.len, this.page_size) + over);
+        const over: usize = if (this.score_read.scores.items.len % this.page_size > 0) 1 else 0;
+        page_total.Int = @intCast(i32, @divTrunc(this.score_read.scores.items.len, this.page_size) + over);
         try this.stage.store.set(.Int, this.page_total, page_total.Int);
 
-        const amount = std.math.min(this.page_size, this.scores_list.items.len);
+        const amount = std.math.min(this.page_size, this.score_read.scores.items.len);
         try this.display_scores(0, amount);
         this.scores_done_displaying = true;
     }
@@ -144,9 +147,9 @@ pub fn event(this: *@This(), evt: seizer.event.Event) !void {
                 if (node.handle == this.btn_back) {
                     return this.ctx.scene.pop();
                 } else if (node.handle == this.btn_prev) {
-                    if (this.scores_done_loading) {
+                    if (this.score_read.state == .done) {
                         this.page_start -|= this.page_size;
-                        const amount = std.math.min(this.page_start + this.page_size, this.scores_list.items.len);
+                        const amount = std.math.min(this.page_start + this.page_size, this.score_read.scores.items.len);
                         try this.display_scores(this.page_start, amount);
                         var page = this.stage.store.get(this.page);
                         page.Int -= 1;
@@ -154,9 +157,9 @@ pub fn event(this: *@This(), evt: seizer.event.Event) !void {
                         try this.stage.store.set(.Int, this.page, page.Int);
                     }
                 } else if (node.handle == this.btn_next) {
-                    if (this.scores_done_loading and this.page_start + this.page_size < this.scores_list.items.len) {
+                    if (this.score_read.state == .done and this.page_start + this.page_size < this.score_read.scores.items.len) {
                         this.page_start += this.page_size;
-                        const amount = std.math.min(this.page_start + this.page_size, this.scores_list.items.len);
+                        const amount = std.math.min(this.page_start + this.page_size, this.score_read.scores.items.len);
                         try this.display_scores(this.page_start, amount);
                         var page = this.stage.store.get(this.page);
                         page.Int += 1;
@@ -191,29 +194,4 @@ pub fn render(this: *@This(), _: f64) !void {
     this.stage.paintAll(.{ 0, 0, screen_size.x, screen_size.y });
 
     this.ctx.flat.flush();
-}
-
-fn load_scores(this: *@This()) void {
-    var txn = this.ctx.db.begin(&.{"scores"}, .{ .readonly = true }) catch unreachable;
-    defer txn.deinit();
-
-    var store = txn.store("scores") catch unreachable;
-    defer store.release();
-
-    var cursor = store.cursor(.{}) catch unreachable;
-    defer cursor.deinit();
-
-    var arena = std.heap.ArenaAllocator.init(this.ctx.allocator);
-    defer arena.deinit();
-
-    while (cursor.next() catch unreachable) |entry| {
-        const score_decoder = Decoder(ScoreEntry).fromBytes(entry.val) catch continue;
-        const score = score_decoder.decode(arena.allocator()) catch continue;
-
-        this.scores_list.append(score) catch unreachable;
-    }
-
-    std.mem.reverse(ScoreEntry, this.scores_list.items);
-
-    this.scores_done_loading = true;
 }
