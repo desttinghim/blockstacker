@@ -11,11 +11,11 @@ pub fn contains(size: Vec, point: Veci) bool {
 }
 
 pub fn vec2i(size: Vec, pos: Veci) ?usize {
-    return if (contains(size, pos)) @intCast(usize, pos.x) + (size.x * @intCast(usize, pos.y)) else null;
+    return if (contains(size, pos)) @as(usize, @intCast(pos.x)) + (size.x * @as(usize, @intCast(pos.y))) else null;
 }
 
 pub fn i2vec(size: Vec, i: usize) ?Veci {
-    return if (i < size.x * size.y) veci(@intCast(isize, i % size.x), @intCast(isize, i / size.x)) else null;
+    return if (i < size.x * size.y) veci(@as(isize, @intCast(i % size.x)), @as(isize, @intCast(i / size.x))) else null;
 }
 
 /// Shuffles a slice in place
@@ -36,15 +36,21 @@ const Vec2 = seizer.math.Vec(2, i32);
 const vec2 = Vec2.init;
 pub fn pixelToTex(tex: *Texture, pixel: Vec2) Vec2f {
     return vec2f(
-        @intToFloat(f32, pixel.x) / @intToFloat(f32, tex.size.x),
-        @intToFloat(f32, pixel.y) / @intToFloat(f32, tex.size.y),
+        @as(f32, @floatFromInt(pixel.x)) / @as(f32, @floatFromInt(tex.size.x)),
+        @as(f32, @floatFromInt(pixel.y)) / @as(f32, @floatFromInt(tex.size.y)),
     );
 }
 
 pub const Tilemap = struct {
-    blocks: []geom.AABB,
+    blocks: []geom.AABB(f32),
     ninepatches: []NinepatchInfo,
 
+    pub fn fromMemory(gpa: std.mem.Allocator, contents: []const u8) !Tilemap {
+        var parsed = try std.json.parseFromSlice(Tilemap.JSON, gpa, contents, .{});
+        defer parsed.deinit();
+        const tilemap = try parsed.value.convert(gpa);
+        return tilemap;
+    }
     pub fn deinit(this: @This(), alloc: std.mem.Allocator) void {
         alloc.free(this.blocks);
         alloc.free(this.ninepatches);
@@ -52,7 +58,7 @@ pub const Tilemap = struct {
 
     const NinepatchInfo = struct {
         size: usize,
-        bounds: geom.AABB,
+        bounds: geom.AABB(f32),
     };
 
     const NinepatchJSONInfo = struct {
@@ -64,15 +70,33 @@ pub const Tilemap = struct {
         blocks: [][4]i32,
         ninepatches: []NinepatchJSONInfo,
         fn convert(this: @This(), alloc: std.mem.Allocator) !Tilemap {
-            const blocks = try alloc.alloc(geom.AABB, this.blocks.len);
-            for (this.blocks) |block, i| {
-                blocks[i] = .{ block[0], block[1], block[0] + block[2], block[1] + block[3] };
+            const blocks = try alloc.alloc(geom.AABB(f32), this.blocks.len);
+            for (this.blocks, 0..) |block, i| {
+                blocks[i] = .{
+                    .min = .{
+                        @floatFromInt(block[0]),
+                        @floatFromInt(block[1]),
+                    },
+                    .max = .{
+                        @floatFromInt(block[0] + block[2]),
+                        @floatFromInt(block[1] + block[3]),
+                    },
+                };
             }
             const ninepatches = try alloc.alloc(NinepatchInfo, this.ninepatches.len);
-            for (this.ninepatches) |ninepatch, i| {
+            for (this.ninepatches, 0..) |ninepatch, i| {
                 ninepatches[i] = .{
                     .size = ninepatch.size,
-                    .bounds = .{ ninepatch.bounds[0], ninepatch.bounds[1], ninepatch.bounds[0] + ninepatch.bounds[2], ninepatch.bounds[1] + ninepatch.bounds[3] },
+                    .bounds = .{
+                        .min = .{
+                            @floatFromInt(ninepatch.bounds[0]),
+                            @floatFromInt(ninepatch.bounds[1]),
+                        },
+                        .max = .{
+                            @floatFromInt(ninepatch.bounds[0] + ninepatch.bounds[2]),
+                            @floatFromInt(ninepatch.bounds[1] + ninepatch.bounds[3]),
+                        },
+                    },
                 };
             }
             return Tilemap{
@@ -82,15 +106,3 @@ pub const Tilemap = struct {
         }
     };
 };
-
-pub fn load_tilemap_file(alloc: std.mem.Allocator, path: []const u8, maxsize: usize) !Tilemap {
-    const file_contents = try seizer.fetch(alloc, path, maxsize);
-    defer alloc.free(file_contents);
-
-    var tokenstream = std.json.TokenStream.init(file_contents);
-    const options = std.json.ParseOptions{ .allocator = alloc };
-    var tilemap_json = try std.json.parse(Tilemap.JSON, &tokenstream, options);
-    defer std.json.parseFree(Tilemap.JSON, tilemap_json, options);
-    const tilemap = try tilemap_json.convert(alloc);
-    return tilemap;
-}

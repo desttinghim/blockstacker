@@ -1,0 +1,14 @@
+.{
+	.name = "blockstacker",
+	.version = "0.1.0",
+	.dependencies = .{
+		.seizer = .{
+			.url = "https://github.com/leroycep/seizer/archive/8e73088cd705a3241e44493db42b6709ae0136fe.tar.gz",
+			.hash = "1220835cb0ad9bb750ff791733837e6663026fe2454d7aa48960f761ab0745954790",
+		},
+        .glfw = .{
+            .url = "https://github.com/leroycep/glfw/archive/80254d41f0638dc0751225b92fd2b3586b7aeca5.tar.gz",
+            .hash = "12206ebe47a5a339ef7a53a7250a9920a6aba3d972812fc52503f8e83f4aca64c0b4",
+        },
+	},
+}
